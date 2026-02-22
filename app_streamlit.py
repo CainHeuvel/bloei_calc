@@ -269,7 +269,7 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
         background-color: rgba(59, 188, 201, 0.15) !important;
     }}
 }}
-.bloei-title-petrol {
+.bloei-title-petrol {{
     color: var(--bloei-petrol);
     margin: 0 0 0.5rem;
     font-weight: 600;
