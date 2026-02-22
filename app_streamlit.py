@@ -147,6 +147,8 @@ div.stSlider > div[data-baseweb="slider"] > div > div > div:first-child {
 div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {
     background-color: var(--bloei-petrol) !important;
     border-color: var(--bloei-petrol) !important;
+    border-width: 2px !important;
+    box-shadow: none !important;
 }
 :root {{
     --bloei-pink: {BLOEI_PINK};
@@ -244,6 +246,8 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
     div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {{
         background-color: var(--bloei-dark-petrol) !important;
         border-color: var(--bloei-dark-petrol) !important;
+        border-width: 2px !important;
+        box-shadow: none !important;
     }}
     /* Reset button color for dark mode */
     div.stButton > button:first-child {{
