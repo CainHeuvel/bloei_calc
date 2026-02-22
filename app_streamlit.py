@@ -282,7 +282,7 @@ if st.button("Bereken Prognose", type="primary", use_container_width=True):
                 y=alt.Y(
                     "vermogen_p10_netto:Q",
                     title="Vermogen",
-                    axis=alt.Axis(format=",.0f", labelExpr="'€ ' + replace(datum.label, ',' , '.')"),
+                    axis=alt.Axis(format=",.0f", labelExpr="'€ ' + replace(datum.label, regexp(',', 'g'), '.')"),
                 ),
                 y2=alt.Y2("vermogen_p90_netto:Q"),
                 tooltip=[
