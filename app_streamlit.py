@@ -124,22 +124,33 @@ st.set_page_config(
 st.markdown(
     f"""
 <style>
+:root {
+    --bloei-pink: {BLOEI_PINK};
+    --bloei-petrol: {BLOEI_PETROL};
+    --bloei-dark-petrol: {DARK_MODE_PETROL};
+    --bloei-warmgrey: {BLOEI_WARMGREY};
+    --bloei-positive: {POSITIVE_COLOR};
+    --bloei-negative: {NEGATIVE_COLOR};
+}
+</style>
+""" + """
+<style>
 /* Reset button color to petrol globally, regardless of environment */
-div.stButton > button:first-child {{
+div.stButton > button:first-child {
     background-color: var(--bloei-petrol) !important;
     color: white !important;
     border-color: var(--bloei-petrol) !important;
-}}
-div.stButton > button:first-child:hover {{
+}
+div.stButton > button:first-child:hover {
     background-color: #0c393e !important;
     border-color: #0c393e !important;
     color: white !important;
-}}
-div.stButton > button:first-child:active {{
+}
+div.stButton > button:first-child:active {
     background-color: #092e32 !important;
     border-color: #092e32 !important;
     color: white !important;
-}}
+}
 /* Reset slider color to petrol */
 div.stSlider > div[data-baseweb="slider"] > div > div > div:first-child {
     background-color: var(--bloei-petrol) !important;
@@ -150,133 +161,126 @@ div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {
     border-width: 2px !important;
     box-shadow: none !important;
 }
-:root {{
-    --bloei-pink: {BLOEI_PINK};
-    --bloei-petrol: {BLOEI_PETROL};
-    --bloei-dark-petrol: {DARK_MODE_PETROL};
-    --bloei-warmgrey: {BLOEI_WARMGREY};
-    --bloei-positive: {POSITIVE_COLOR};
-    --bloei-negative: {NEGATIVE_COLOR};
-}}
+
 /* Modern Metric Containers */
-div[data-testid="metric-container"] {{
+div[data-testid="metric-container"] {
     background-color: var(--secondary-background-color);
     border: 1px solid rgba(128, 128, 128, 0.2);
     border-radius: 12px;
     padding: 1.25rem 1.5rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-}}
-div[data-testid="metric-container"]:hover {{
+}
+div[data-testid="metric-container"]:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}}
-div[data-testid="metric-container"] label {{
+}
+div[data-testid="metric-container"] label {
     font-weight: 500;
     font-size: 0.95rem;
     opacity: 0.8;
-}}
-div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
+}
+div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
     color: var(--primary-color);
     font-weight: 700;
     font-size: 2.2rem;
-}}
-.bloei-note {{
+}
+.bloei-note {
     margin: 0.5rem 0 0;
     font-size: 0.9rem;
     color: var(--text-color);
     opacity: 0.7;
-}}
-.bloei-positive {{
+}
+.bloei-positive {
     color: var(--bloei-positive);
     font-weight: 600;
-}}
-.bloei-negative {{
+}
+.bloei-negative {
     color: var(--bloei-negative);
     font-weight: 600;
-}}
-.kosten-open-table {{
+}
+.kosten-open-table {
     width: 100%;
     margin: 1rem 0;
     border-collapse: collapse;
     color: var(--text-color);
-}}
-.kosten-open-table th {{
+}
+.kosten-open-table th {
     text-align: left;
     font-size: 0.95rem;
     font-weight: 600;
     padding: 0.75rem 0.5rem;
     border-bottom: 2px solid rgba(128, 128, 128, 0.2);
-}}
-.kosten-open-table td {{
+}
+.kosten-open-table td {
     padding: 0.75rem 0.5rem;
     border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-}}
+}
 .kosten-open-table th:last-child,
-.kosten-open-table td:last-child {{
+.kosten-open-table td:last-child {
     text-align: right;
-}}
+}
 
 /* Optimalisaties voor Dark Mode: Lichte tekst en kleuren voor donkere achtergronden */
-@media (prefers-color-scheme: dark) {{
-    div[data-testid="metric-container"] {{
+@media (prefers-color-scheme: dark) {
+    div[data-testid="metric-container"] {
         border-color: rgba(255, 255, 255, 0.1);
         background-color: transparent !important;
-    }}
+    }
     div[data-testid="metric-container"] label,
-    .bloei-note {{
+    .bloei-note {
         color: #e0e0e0 !important;
-    }}
-    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
+    }
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
         color: var(--bloei-dark-petrol) !important;
-    }}
-    .bloei-title-petrol {{
+    }
+    .bloei-title-petrol {
         color: var(--bloei-dark-petrol) !important;
-    }}
-    .kosten-open-table th {{
+    }
+    .kosten-open-table th {
         border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-    }}
-    .kosten-open-table td {{
+    }
+    .kosten-open-table td {
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }}
+    }
     /* Fix slider colors for dark mode */
-    div.stSlider > div[data-baseweb="slider"] > div > div > div:first-child {{
+    div.stSlider > div[data-baseweb="slider"] > div > div > div:first-child {
         background-color: var(--bloei-dark-petrol) !important;
-    }}
-    div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {{
+    }
+    div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {
         background-color: var(--bloei-dark-petrol) !important;
         border-color: var(--bloei-dark-petrol) !important;
         border-width: 2px !important;
         box-shadow: none !important;
-    }}
+    }
     /* Reset button color for dark mode */
-    div.stButton > button:first-child {{
+    div.stButton > button:first-child {
         background-color: var(--bloei-dark-petrol) !important;
         border-color: var(--bloei-dark-petrol) !important;
         color: #121212 !important;
-    }}
-    div.stButton > button:first-child:hover {{
+    }
+    div.stButton > button:first-child:hover {
         background-color: #45c4d1 !important;
         border-color: #45c4d1 !important;
         color: #121212 !important;
-    }}
-    div.stButton > button:first-child:active {{
+    }
+    div.stButton > button:first-child:active {
         background-color: #55d0dd !important;
         border-color: #55d0dd !important;
         color: #121212 !important;
-    }}
-    .highlight-row {{
+    }
+    .highlight-row {
         background-color: rgba(59, 188, 201, 0.15) !important;
-    }}
-}}
-.bloei-title-petrol {{
+    }
+}
+.bloei-title-petrol {
     color: var(--bloei-petrol);
     margin: 0 0 0.5rem;
     font-weight: 600;
-}}
-.highlight-row {{
+}
+.highlight-row {
     background-color: rgba(15, 73, 79, 0.05);
-}}
+}
 </style>
 """,
     unsafe_allow_html=True,
