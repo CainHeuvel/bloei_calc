@@ -16,7 +16,6 @@ NEGATIVE_COLOR = "#b34025"
 # Profile ordering (offensive -> defensive)
 PROFIEL_ORDER = ["Zeer offensief", "Offensief", "Neutraal", "Matig defensief", "Defensief", "Niet beleggen"]
 
-
 def allowed_profielen_for_horizon(horizon_jaren: int) -> list[str]:
     """Return allowed profile options for a given horizon, most-offensive -> most-defensive."""
     h = float(horizon_jaren)
@@ -31,7 +30,6 @@ def allowed_profielen_for_horizon(horizon_jaren: int) -> list[str]:
     if 3 < h:
         return PROFIEL_ORDER[4:]
     return ["Niet beleggen"]
-
 
 def default_profiel_for_horizon(horizon_jaren: int) -> str:
     opts = allowed_profielen_for_horizon(horizon_jaren)
@@ -112,8 +110,10 @@ st.set_page_config(
     page_title="Bloei Rekenmodule",
     page_icon="📊",
     layout="wide",
+    initial_sidebar_state="expanded"
 )
 
+# Custom Minimalist CSS
 st.markdown(
     f"""
 <style>
@@ -124,19 +124,37 @@ st.markdown(
     --bloei-positive: {POSITIVE_COLOR};
     --bloei-negative: {NEGATIVE_COLOR};
 }}
-div[data-testid="metric-container"] {{
-    background-color: var(--bloei-warmgrey);
-    border: 1px solid rgba(15, 73, 79, 0.2);
-    border-radius: 8px;
-    padding: 1rem;
+/* Sidebar styling */
+[data-testid="stSidebar"] {{
+    background-color: #f8f9fa;
 }}
-div[data-testid="metric-container"] label,
+/* Modern Metric Containers */
+div[data-testid="metric-container"] {{
+    background-color: #ffffff;
+    border: 1px solid rgba(15, 73, 79, 0.1);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}}
+div[data-testid="metric-container"]:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}}
+div[data-testid="metric-container"] label {{
+    color: #666666;
+    font-weight: 500;
+    font-size: 0.95rem;
+}}
 div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
     color: var(--bloei-petrol);
+    font-weight: 700;
+    font-size: 2.2rem;
 }}
 .bloei-note {{
-    margin: 0.35rem 0 0;
-    font-size: 0.95rem;
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+    color: #777;
 }}
 .bloei-positive {{
     color: var(--bloei-positive);
@@ -147,21 +165,21 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
     font-weight: 600;
 }}
 .kosten-open-table {{
-    width: min(100%, 760px);
-    margin: 0.75rem auto 0;
+    width: 100%;
+    margin: 1rem 0;
     border-collapse: collapse;
     color: var(--bloei-petrol);
 }}
 .kosten-open-table th {{
     text-align: left;
-    font-size: 0.92rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    padding: 0.5rem 0.35rem;
-    border-bottom: 1px solid rgba(15, 73, 79, 0.25);
+    padding: 0.75rem 0.5rem;
+    border-bottom: 2px solid rgba(15, 73, 79, 0.1);
 }}
 .kosten-open-table td {{
-    padding: 0.55rem 0.35rem;
-    border-bottom: 1px solid rgba(15, 73, 79, 0.15);
+    padding: 0.75rem 0.5rem;
+    border-bottom: 1px solid rgba(15, 73, 79, 0.05);
 }}
 .kosten-open-table th:last-child,
 .kosten-open-table td:last-child {{
@@ -172,426 +190,431 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
     unsafe_allow_html=True,
 )
 
-st.title("Bloei Rekenmodule")
-
-st.header("Input Parameters")
-
-col1, col2 = st.columns(2)
-
-with col1:
+# ==========================================
+# SIDEBAR: Input Parameters
+# ==========================================
+with st.sidebar:
+    st.title("⚙️ Parameters")
+    
     startvermogen = currency_text_input(
         "Startvermogen (€)",
         key="startvermogen",
         default=100000.0,
         min_value=0.01,
     )
-
-with col2:
-    startdatum = st.date_input(
-        "Startdatum",
-        value=date.today(),
-    )
     
-    horizon_jaren = st.slider(
-        "Horizon (jaren)",
-        min_value=0,
-        max_value=40,
-        value=10,
-    )
+    startdatum = st.date_input("Startdatum", value=date.today())
     
-
-with st.expander("Geavanceerde Instellingen"):
-    afbouw_profiel = st.checkbox(
-        "Afbouw profiel op basis van horizon",
-        value=False,
-    )
-    n_scenarios = st.number_input(
-        "Aantal marktsimulaties",
-        min_value=1,
-        value=5000,
-        step=100,
-    )
-
-end_date = _add_years(startdatum, int(horizon_jaren))
-
-st.divider()
-st.subheader("Profiel")
-
-profiel_opties = allowed_profielen_for_horizon(int(horizon_jaren))
-
-if not afbouw_profiel:
-    if "profiel_handmatig" in st.session_state and st.session_state["profiel_handmatig"] not in profiel_opties:
-        del st.session_state["profiel_handmatig"]
-
-    default_idx = min(2, len(profiel_opties) - 1)
-    profiel = st.selectbox(
-        "Profiel",
-        options=profiel_opties,
-        index=default_idx,
-        key="profiel_handmatig",
-    )
-    profiel_input = profiel
-    profiel_label = "Vast profiel"
-else:
-    st.caption("Afbouw: profiel wordt per maand defensiever op basis van resterende horizon.")
+    horizon_jaren = st.slider("Horizon (jaren)", min_value=0, max_value=40, value=10)
+    end_date = _add_years(startdatum, int(horizon_jaren))
     
-    if "profiel_start_afbouw" in st.session_state and st.session_state["profiel_start_afbouw"] not in profiel_opties:
-        del st.session_state["profiel_start_afbouw"]
-
-    default_start = default_profiel_for_horizon(int(horizon_jaren))
-    default_index = profiel_opties.index(default_start) if default_start in profiel_opties else 0
-
-    profiel = st.selectbox(
-        "Startprofiel",
-        options=profiel_opties,
-        index=default_index,
-        key="profiel_start_afbouw",
-    )
-    profiel_input = profiel
-    profiel_label = "Startprofiel (afbouw-cap)"
-
-st.divider()
-st.header("Cashflows")
-cashflow_col1, cashflow_col2 = st.columns(2)
-
-with cashflow_col1:
-    st.subheader("Periodieke Cashflows")
-    periodieke_storting = currency_text_input(
-        "Periodieke Storting (EUR/maand)",
-        key="periodieke_storting",
-        default=0.0,
-        min_value=0.0,
-    )
-
-    storting_beperken = st.checkbox("Beperk periodieke storting tot periode")
-    if storting_beperken and periodieke_storting > 0:
-        st_col_s, st_col_e = st.columns(2)
-        with st_col_s:
-            periodieke_storting_startdatum = st.date_input("Startdatum storting", value=startdatum, min_value=startdatum, max_value=end_date)
-        with st_col_e:
-            periodieke_storting_einddatum = st.date_input("Einddatum storting", value=end_date, min_value=startdatum, max_value=end_date)
-    else:
-        periodieke_storting_startdatum = None
-        periodieke_storting_einddatum = None
+    profiel_opties = allowed_profielen_for_horizon(int(horizon_jaren))
     
-    periodieke_onttrekking = currency_text_input(
-        "Periodieke Onttrekking (EUR/maand)",
-        key="periodieke_onttrekking",
-        default=0.0,
-        min_value=0.0,
-    )
-
-    onttrekking_beperken = st.checkbox("Beperk periodieke onttrekking tot periode")
-    if onttrekking_beperken and periodieke_onttrekking > 0:
-        ot_col_s, ot_col_e = st.columns(2)
-        with ot_col_s:
-            periodieke_onttrekking_startdatum = st.date_input("Startdatum onttrekking", value=startdatum, min_value=startdatum, max_value=end_date)
-        with ot_col_e:
-            periodieke_onttrekking_einddatum = st.date_input("Einddatum onttrekking", value=end_date, min_value=startdatum, max_value=end_date)
-    else:
-        periodieke_onttrekking_startdatum = None
-        periodieke_onttrekking_einddatum = None
-
-with cashflow_col2:
-    st.subheader("Eenmalige Cashflows")
-    
-    if st.session_state.eenmalige_cashflows:
-        st.write("**Huidige eenmalige cashflows:**")
-        for idx, cf in enumerate(st.session_state.eenmalige_cashflows):
-            row_col1, row_col2, row_col3, row_col4 = st.columns([2, 2, 2, 1])
-            with row_col1:
-                st.write(f"€{cf.bedrag:,.2f}")
-            with row_col2:
-                st.write("Storting" if cf.type == 'storting' else "Onttrekking")
-            with row_col3:
-                st.write(cf.datum.strftime("%d-%m-%Y"))
-            with row_col4:
-                if st.button("🗑️", key=f"delete_{idx}"):
-                    st.session_state.eenmalige_cashflows.pop(idx)
-                    st.rerun()
-        st.divider()
-    
-    st.write("**Nieuwe cashflow toevoegen:**")
-    with st.form("add_cashflow_form", clear_on_submit=True):
-        new_col1, new_col2, new_col3, new_col4 = st.columns([2.5, 2, 2.5, 1])
-        new_bedrag = 0.0
-        with new_col1:
-            new_bedrag_raw = st.text_input("1. Bedrag (€)", value="0,00")
-        with new_col2:
-            new_type = st.selectbox("2. Type", options=["storting", "onttrekking"])
-        with new_col3:
-            new_datum = st.date_input("3. Wanneer", min_value=startdatum, max_value=end_date, value=startdatum)
-        with new_col4:
-            st.write("")
-            st.write("")
-            add_button = st.form_submit_button("➕", use_container_width=True)
+    with st.expander("📈 Profiel & Simulatie"):
+        afbouw_profiel = st.checkbox("Afbouw profiel o.b.v. horizon", value=False)
         
-        if add_button:
-            try:
-                new_bedrag = parse_nl_number(new_bedrag_raw)
-            except Exception:
-                st.error("Voer een geldig bedrag in, bijvoorbeeld 100.000,00.")
-                new_bedrag = 0.0
+        if not afbouw_profiel:
+            if "profiel_handmatig" in st.session_state and st.session_state["profiel_handmatig"] not in profiel_opties:
+                del st.session_state["profiel_handmatig"]
 
-            if new_bedrag > 0:
-                st.session_state.eenmalige_cashflows.append(EenmaligeCashflow(bedrag=new_bedrag, datum=new_datum, type=new_type))
-                st.rerun()
-    
+            default_idx = min(2, len(profiel_opties) - 1)
+            profiel = st.selectbox("Profiel", options=profiel_opties, index=default_idx, key="profiel_handmatig")
+            profiel_input = profiel
+        else:
+            st.caption("Profiel wordt maandelijks defensiever.")
+            if "profiel_start_afbouw" in st.session_state and st.session_state["profiel_start_afbouw"] not in profiel_opties:
+                del st.session_state["profiel_start_afbouw"]
+
+            default_start = default_profiel_for_horizon(int(horizon_jaren))
+            default_index = profiel_opties.index(default_start) if default_start in profiel_opties else 0
+            profiel = st.selectbox("Startprofiel", options=profiel_opties, index=default_index, key="profiel_start_afbouw")
+            profiel_input = profiel
+            
+        n_scenarios = st.number_input("Aantal marktsimulaties", min_value=100, value=5000, step=100)
+
+    with st.expander("🔄 Periodieke Cashflows"):
+        periodieke_storting = currency_text_input("Maandelijkse Storting (€)", key="periodieke_storting", default=0.0)
+        storting_beperken = st.checkbox("Beperk storting tot periode")
+        if storting_beperken and periodieke_storting > 0:
+            periodieke_storting_startdatum = st.date_input("Start storting", value=startdatum, min_value=startdatum, max_value=end_date)
+            periodieke_storting_einddatum = st.date_input("Eind storting", value=end_date, min_value=startdatum, max_value=end_date)
+        else:
+            periodieke_storting_startdatum = None
+            periodieke_storting_einddatum = None
+        
+        st.divider()
+        
+        periodieke_onttrekking = currency_text_input("Maandelijkse Onttrekking (€)", key="periodieke_onttrekking", default=0.0)
+        onttrekking_beperken = st.checkbox("Beperk onttrekking tot periode")
+        if onttrekking_beperken and periodieke_onttrekking > 0:
+            periodieke_onttrekking_startdatum = st.date_input("Start onttrekking", value=startdatum, min_value=startdatum, max_value=end_date)
+            periodieke_onttrekking_einddatum = st.date_input("Eind onttrekking", value=end_date, min_value=startdatum, max_value=end_date)
+        else:
+            periodieke_onttrekking_startdatum = None
+            periodieke_onttrekking_einddatum = None
+
+    with st.expander("🎯 Eenmalige Cashflows"):
+        if st.session_state.eenmalige_cashflows:
+            for idx, cf in enumerate(st.session_state.eenmalige_cashflows):
+                cf_col1, cf_col2 = st.columns([3, 1])
+                with cf_col1:
+                    st.write(f"{'➕' if cf.type == 'storting' else '➖'} €{cf.bedrag:,.0f} op {cf.datum.strftime('%d-%m-%y')}")
+                with cf_col2:
+                    if st.button("🗑️", key=f"delete_{idx}"):
+                        st.session_state.eenmalige_cashflows.pop(idx)
+                        st.rerun()
+            st.divider()
+            
+        with st.form("add_cashflow_form", clear_on_submit=True):
+            new_bedrag_raw = st.text_input("Bedrag (€)", value="0,00")
+            new_type = st.selectbox("Type", options=["storting", "onttrekking"])
+            new_datum = st.date_input("Datum", min_value=startdatum, max_value=end_date, value=startdatum)
+            
+            if st.form_submit_button("Toevoegen", use_container_width=True):
+                try:
+                    new_bedrag = parse_nl_number(new_bedrag_raw)
+                    if new_bedrag > 0:
+                        st.session_state.eenmalige_cashflows.append(EenmaligeCashflow(bedrag=new_bedrag, datum=new_datum, type=new_type))
+                        st.rerun()
+                except Exception:
+                    st.error("Ongeldig bedrag.")
+
     eenmalige_cashflows_list = st.session_state.eenmalige_cashflows.copy()
 
+    st.divider()
+    calculate_clicked = st.button("Bereken Prognose", type="primary", use_container_width=True)
+
+# ==========================================
+# MAIN CONTENT: Calculations & Results
+# ==========================================
+st.title("Bloei Vermogensprognose")
+
+inp = RekenInput(
+    startvermogen=startvermogen,
+    profiel=profiel_input,
+    startdatum=startdatum,
+    horizon_jaren=horizon_jaren,
+    n_scenarios=n_scenarios,
+    periodieke_storting_maandelijks=periodieke_storting,
+    periodieke_onttrekking_maandelijks=periodieke_onttrekking,
+    periodieke_storting_startdatum=periodieke_storting_startdatum,
+    periodieke_storting_einddatum=periodieke_storting_einddatum,
+    periodieke_onttrekking_startdatum=periodieke_onttrekking_startdatum,
+    periodieke_onttrekking_einddatum=periodieke_onttrekking_einddatum,
+    eenmalige_cashflows=eenmalige_cashflows_list,
+    afbouw_profiel=afbouw_profiel,
+)
+
+if "reken_input" not in st.session_state:
+    st.session_state.reken_input = inp
+
+if calculate_clicked:
+    st.session_state.reken_input = inp
+
+current_inp = st.session_state.reken_input
+
+@st.cache_data(show_spinner=False)
+def get_berekening(reken_inp: RekenInput):
+    return bereken_kosten(reken_inp)
+
+result = get_berekening(current_inp)
+active_startvermogen = current_inp.startvermogen
+
+def fmt_eur(amount: float, decimals: int = 2) -> str:
+    return fmt_eur_nl(amount, decimals)
+
+def signed_class(amount: float) -> str:
+    return "bloei-positive" if amount >= 0 else "bloei-negative"
+
+# Top Metrics
+st.subheader("Verwacht Resultaat")
+return_col1, return_col2, return_col3 = st.columns(3)
+
+with return_col1:
+    st.metric("Eindvermogen Netto", fmt_eur(result.verwacht_eindvermogen_netto, 0))
+    st.markdown(f"<p class='bloei-note'>Na aftrek van alle kosten</p>", unsafe_allow_html=True)
+
+with return_col2:
+    winst_netto = result.verwacht_eindvermogen_netto - (active_startvermogen + sum(result.tijdlijn_cashflow_netto))
+    st.metric("Verwachte Winst Netto", fmt_eur(winst_netto, 0))
+    st.markdown(f"<p class='bloei-note'>Puur rendement na kosten</p>", unsafe_allow_html=True)
+    
+with return_col3:
+    st.metric("Totale Impact Kosten", fmt_eur(-float(result.totale_kosten_impact), 0))
+    st.markdown(f"<p class='bloei-note'>Betaalde kosten + misgelopen rendement</p>", unsafe_allow_html=True)
+
 st.divider()
-if st.button("Bereken Prognose", type="primary", use_container_width=True):
-    inp = RekenInput(
-        startvermogen=startvermogen,
-        profiel=profiel_input,
-        startdatum=startdatum,
-        horizon_jaren=horizon_jaren,
-        n_scenarios=n_scenarios,
-        periodieke_storting_maandelijks=periodieke_storting,
-        periodieke_onttrekking_maandelijks=periodieke_onttrekking,
-        periodieke_storting_startdatum=periodieke_storting_startdatum,
-        periodieke_storting_einddatum=periodieke_storting_einddatum,
-        periodieke_onttrekking_startdatum=periodieke_onttrekking_startdatum,
-        periodieke_onttrekking_einddatum=periodieke_onttrekking_einddatum,
-        eenmalige_cashflows=eenmalige_cashflows_list,
-        afbouw_profiel=afbouw_profiel,
+
+# Dataframe Prep
+df = pd.DataFrame({
+    "datum": [datetime.combine(d, datetime.min.time()) for d in result.tijdlijn_datums],
+    "vermogen_bruto": [float(v) for v in result.tijdlijn_vermogen_bruto],
+    "vermogen_netto": [float(v) for v in result.tijdlijn_vermogen_netto],
+    "vermogen_p10_netto": [float(v) for v in result.tijdlijn_vermogen_p10_netto],
+    "vermogen_p90_netto": [float(v) for v in result.tijdlijn_vermogen_p90_netto],
+    "cashflow_netto": [float(cf) for cf in result.tijdlijn_cashflow_netto],
+    "kosten_cumulatief_betaald": [float(v) for v in result.tijdlijn_kosten_cumulatief],
+    "profiel": list(result.tijdlijn_profiel),
+})
+df["kosten_impact_cumulatief"] = df["vermogen_bruto"] - df["vermogen_netto"]
+df["kosten_misgelopen_rendement_cumulatief"] = (df["kosten_impact_cumulatief"] - df["kosten_cumulatief_betaald"]).clip(lower=0.0)
+df["tooltip_datum"] = df["datum"].dt.strftime("%b %Y")
+df["tooltip_bruto"] = df["vermogen_bruto"].map(lambda x: fmt_eur(x, 0))
+df["tooltip_netto"] = df["vermogen_netto"].map(lambda x: fmt_eur(x, 0))
+df["tooltip_p10"] = df["vermogen_p10_netto"].map(lambda x: fmt_eur(x, 0))
+df["tooltip_p90"] = df["vermogen_p90_netto"].map(lambda x: fmt_eur(x, 0))
+
+
+tab_vermogensopbouw, tab_waterfall, tab_cashflow, tab_kosten = st.tabs([
+    "📈 Vermogensopbouw", "🌊 Reis van uw geld", "💶 Cashflow Tabel", "📉 Kosten Breakdown"
+])
+
+with tab_vermogensopbouw:
+    if len(df) <= 1:
+        st.info("Geen tijdlijn, horizon is 0 jaar.")
+    else:
+        # Toggles for chart
+        toggles_col1, toggles_col2 = st.columns(2)
+        with toggles_col1:
+            show_p10_p90 = st.toggle("Toon onzekerheidsmarges (P10/P90)", value=True)
+        with toggles_col2:
+            show_bruto = st.toggle("Toon bruto ontwikkeling (zonder kosten)", value=True)
+            
+        base = alt.Chart(df)
+        y_min = float(df[["vermogen_p10_netto", "vermogen_netto", "vermogen_bruto"]].min().min())
+        y_max = float(df[["vermogen_p90_netto", "vermogen_netto", "vermogen_bruto"]].max().max())
+        y_padding = max((y_max - y_min) * 0.12, max(1.0, y_max * 0.03))
+        y_domain_min = max(0.0, y_min - y_padding)
+        y_domain_max = y_max + y_padding
+        first_tick = df["datum"].iloc[0].to_pydatetime()
+        year_ticks = [datetime(year, 1, 1) for year in range(first_tick.year, df["datum"].iloc[-1].year + 1)]
+        if first_tick not in year_ticks:
+            year_ticks.insert(0, first_tick)
+            
+        x_year_axis = alt.X(
+            "datum:T",
+            title=None,
+            axis=alt.Axis(format="%Y", values=year_ticks, labelAngle=0, grid=False),
+        )
+        
+        y_axis = alt.Y(
+            "vermogen_netto:Q", 
+            title="Vermogen (€)",
+            scale=alt.Scale(domain=[y_domain_min, y_domain_max], nice=False, zero=False),
+            axis=alt.Axis(format=",.0f", labelExpr="replace(datum.label, regexp(',', 'g'), '.')", gridColor="#f0f0f0")
+        )
+
+        layers = []
+        
+        if show_p10_p90:
+            band_netto = base.mark_area(opacity=0.15, color=BLOEI_PETROL).encode(
+                x=x_year_axis,
+                y=alt.Y("vermogen_p10_netto:Q"),
+                y2=alt.Y2("vermogen_p90_netto:Q"),
+                tooltip=[
+                    alt.Tooltip("tooltip_datum:N", title="Maand"),
+                    alt.Tooltip("tooltip_p90:N", title="Optimistisch (P90)"),
+                    alt.Tooltip("tooltip_netto:N", title="Verwacht (Netto)"),
+                    alt.Tooltip("tooltip_p10:N", title="Pessimistisch (P10)"),
+                ]
+            )
+            layers.append(band_netto)
+
+        if show_bruto:
+            line_bruto = base.mark_line(color=BLOEI_PINK, strokeDash=[6, 4], strokeWidth=2).encode(
+                x=x_year_axis,
+                y=alt.Y("vermogen_bruto:Q"),
+                tooltip=[
+                    alt.Tooltip("tooltip_datum:N", title="Maand"),
+                    alt.Tooltip("tooltip_bruto:N", title="Bruto Vermogen"),
+                ]
+            )
+            layers.append(line_bruto)
+
+        line_netto = base.mark_line(color=BLOEI_PETROL, strokeWidth=4).encode(
+            x=x_year_axis,
+            y=y_axis,
+            tooltip=[
+                alt.Tooltip("tooltip_datum:N", title="Maand"),
+                alt.Tooltip("tooltip_netto:N", title="Netto Vermogen"),
+                alt.Tooltip("profiel:N", title="Risicoprofiel"),
+            ]
+        )
+        layers.append(line_netto)
+        
+        vermogen_chart = alt.layer(*layers).properties(height=500).configure_view(strokeWidth=0)
+        st.altair_chart(vermogen_chart, use_container_width=True)
+
+with tab_waterfall:
+    st.subheader("Van Start tot Eindvermogen")
+    st.write("Hoe uw vermogen is opgebouwd over de gehele periode.")
+    
+    totale_stortingen = sum(cf for cf in result.tijdlijn_cashflow_netto if cf > 0)
+    totale_onttrekkingen = sum(cf for cf in result.tijdlijn_cashflow_netto if cf < 0)
+    
+    bruto_rendement = result.verwacht_eindvermogen_bruto - (active_startvermogen + totale_stortingen + totale_onttrekkingen)
+    kosten_impact = -(result.verwacht_eindvermogen_bruto - result.verwacht_eindvermogen_netto)
+    
+    rows = []
+    current_idx = 1
+    
+    # 1. Start
+    components_so_far = [("Startvermogen", active_startvermogen, 1)]
+    for comp, amt, ord_idx in components_so_far:
+        rows.append({"category": f"{current_idx}. Start", "component": comp, "amount": amt, "order_idx": ord_idx})
+    current_idx += 1
+    
+    # 2. + Inleg
+    if totale_stortingen > 0:
+        components_so_far.append(("Stortingen", totale_stortingen, 2))
+        for comp, amt, ord_idx in components_so_far:
+            rows.append({"category": f"{current_idx}. + Inleg", "component": comp, "amount": amt, "order_idx": ord_idx})
+        current_idx += 1
+        
+    # 3. + Rendement (Bruto)
+    components_so_far.append(("Rendement (Bruto)", bruto_rendement, 3))
+    for comp, amt, ord_idx in components_so_far:
+        rows.append({"category": f"{current_idx}. + Rendement (Bruto)", "component": comp, "amount": amt, "order_idx": ord_idx})
+    current_idx += 1
+        
+    # 4. - Onttrekkingen
+    if totale_onttrekkingen < 0:
+        components_so_far.append(("Onttrekkingen", totale_onttrekkingen, 4))
+        for comp, amt, ord_idx in components_so_far:
+            rows.append({"category": f"{current_idx}. - Onttrekkingen", "component": comp, "amount": amt, "order_idx": ord_idx})
+        current_idx += 1
+        
+    # 5. - Kosten (Eindvermogen)
+    components_so_far.append(("Kosten Impact", kosten_impact, 5))
+    for comp, amt, ord_idx in components_so_far:
+        rows.append({"category": f"{current_idx}. Eindvermogen (Netto)", "component": comp, "amount": amt, "order_idx": ord_idx})
+
+    df_rows = []
+    categories = []
+    for r in rows:
+        if r["category"] not in categories:
+            categories.append(r["category"])
+            
+    for cat in categories:
+        cat_rows = [r for r in rows if r["category"] == cat]
+        cat_rows = sorted(cat_rows, key=lambda x: x["order_idx"])
+        current_y = 0.0
+        for r in cat_rows:
+            y1 = current_y
+            y2 = current_y + r["amount"]
+            r["y_start"] = y1
+            r["y_end"] = y2
+            current_y = y2
+            df_rows.append(r)
+
+    wf_data = pd.DataFrame(df_rows)
+    wf_data['tooltip_amount'] = wf_data['amount'].map(lambda x: fmt_eur(x, 0))
+    
+    domain = ["Startvermogen"]
+    range_ = [BLOEI_PETROL]
+    
+    if totale_stortingen > 0:
+        domain.append("Stortingen")
+        range_.append(POSITIVE_COLOR)
+        
+    if totale_onttrekkingen < 0:
+        domain.append("Onttrekkingen")
+        range_.append(NEGATIVE_COLOR)
+        
+    domain.append("Rendement (Bruto)")
+    range_.append(BLOEI_PINK)
+    
+    domain.append("Kosten Impact")
+    range_.append("#d65c60")
+    
+    color_scale = alt.Scale(
+        domain=domain,
+        range=range_
     )
     
-    result = bereken_kosten(inp)
+    waterfall_chart = alt.Chart(wf_data).mark_bar(cornerRadius=4, size=50).encode(
+        x=alt.X("category:N", title=None, axis=alt.Axis(labels=False, tickSize=0)),
+        y=alt.Y("y_start:Q", title="Vermogen (€)", axis=alt.Axis(format=",.0f", labelExpr="replace(datum.label, regexp(',', 'g'), '.')")),
+        y2=alt.Y2("y_end:Q"),
+        color=alt.Color("component:N", scale=color_scale, legend=alt.Legend(title="Component", orient="bottom")),
+        order=alt.Order("order_idx:Q", sort="ascending"),
+        tooltip=[
+            alt.Tooltip("category:N", title="Fase"),
+            alt.Tooltip("component:N", title="Onderdeel"),
+            alt.Tooltip("tooltip_amount:N", title="Bedrag"),
+        ]
+    ).properties(height=450).configure_view(strokeWidth=0)
     
-    st.header("Verwachte Vermogensontwikkeling")
-    
-    st.subheader("Resultaten op basis van historische marktsimulaties")
-    return_col1, return_col2, return_col3, return_col4 = st.columns(4)
+    st.altair_chart(waterfall_chart, use_container_width=True)
 
-    def fmt_eur(amount: float, decimals: int = 2) -> str:
-        return fmt_eur_nl(amount, decimals)
-    
-    def signed_class(amount: float) -> str:
-        return "bloei-positive" if amount >= 0 else "bloei-negative"
+with tab_cashflow:
+    if len(df) > 1:
+        df_work = df.copy()
+        df_work["maand_index"] = range(len(df_work))
+        jaar_nul = df_work.iloc[[0]].copy()
+        jaar_nul["Jaar"] = 0
+        jaar_nul["cashflow_netto"] = 0.0
 
-    with return_col1:
-        st.metric("Eindvermogen Bruto (zonder kosten)", fmt_eur(result.verwacht_eindvermogen_bruto))
-        st.caption("Fictieve ontwikkeling puur op basis van marktrendement.")
-        st.markdown(
-            f"<p class='bloei-note'>Bruto eindwaarde: "
-            f"<span class='{signed_class(result.verwacht_eindvermogen_bruto)}'>"
-            f"{fmt_eur(result.verwacht_eindvermogen_bruto)}</span></p>",
-            unsafe_allow_html=True,
+        df_periodiek = df_work[df_work["maand_index"] > 0].copy()
+        df_periodiek["Jaar"] = ((df_periodiek["maand_index"] - 1) // 12) + 1
+
+        yearly_end = df_periodiek.groupby("Jaar", as_index=False).agg(
+            vermogen_bruto=("vermogen_bruto", "last"),
+            vermogen_netto=("vermogen_netto", "last"),
+            kosten_cumulatief_betaald=("kosten_cumulatief_betaald", "last"),
+            kosten_misgelopen_rendement_cumulatief=("kosten_misgelopen_rendement_cumulatief", "last"),
+            profiel=("profiel", "last"),
         )
-        
-    with return_col2:
-        st.metric("Eindvermogen Netto (na kosten)", fmt_eur(result.verwacht_eindvermogen_netto))
-        st.caption(f"P10: {fmt_eur(result.verwacht_eindvermogen_p10_netto)} | P50: {fmt_eur(result.verwacht_eindvermogen_p50_netto)} | P90: {fmt_eur(result.verwacht_eindvermogen_p90_netto)}")
-        st.markdown(
-            f"<p class='bloei-note'>Verwachte netto eindwaarde: "
-            f"<span class='{signed_class(result.verwacht_eindvermogen_netto)}'>"
-            f"{fmt_eur(result.verwacht_eindvermogen_netto)}</span></p>",
-            unsafe_allow_html=True,
+        yearly_cashflow = df_periodiek.groupby("Jaar", as_index=False).agg(cashflow_netto=("cashflow_netto", "sum"))
+        df_year = yearly_end.merge(yearly_cashflow, on="Jaar", how="left")
+
+        jaar_nul_row = pd.DataFrame({
+            "Jaar": [0],
+            "vermogen_bruto": [float(jaar_nul["vermogen_bruto"].iloc[0])],
+            "vermogen_netto": [float(jaar_nul["vermogen_netto"].iloc[0])],
+            "cashflow_netto": [0.0],
+            "kosten_cumulatief_betaald": [0.0],
+            "kosten_misgelopen_rendement_cumulatief": [0.0],
+            "profiel": [jaar_nul["profiel"].iloc[0]],
+        })
+
+        df_year = pd.concat([jaar_nul_row, df_year], ignore_index=True)
+        df_year["Cumulatieve Kosten Impact"] = df_year["vermogen_bruto"] - df_year["vermogen_netto"]
+
+        for col in ["vermogen_bruto", "vermogen_netto", "cashflow_netto", "kosten_cumulatief_betaald", "kosten_misgelopen_rendement_cumulatief", "Cumulatieve Kosten Impact"]:
+            df_year[col] = df_year[col].map(lambda x: fmt_eur(x, 0))
+
+        st.dataframe(
+            df_year[[
+                "Jaar", "vermogen_bruto", "vermogen_netto", "cashflow_netto", 
+                "kosten_cumulatief_betaald", "kosten_misgelopen_rendement_cumulatief", 
+                "Cumulatieve Kosten Impact", "profiel"
+            ]].rename(columns={
+                "vermogen_bruto": "Vermogen Bruto",
+                "vermogen_netto": "Vermogen Netto",
+                "cashflow_netto": "Netto Cashflow",
+                "kosten_cumulatief_betaald": "Cumul. Kosten Betaald",
+                "kosten_misgelopen_rendement_cumulatief": "Cumul. Misgelopen Rendement",
+                "profiel": "Profiel (eind jaar)"
+            }),
+            hide_index=True,
+            use_container_width=True,
         )
-        
-    with return_col3:
-        st.metric("Totale Cumulatieve Kosten", fmt_eur(-float(result.totale_kosten_betaald)))
-        st.caption("Exclusief misgelopen rendement op rendement.")
+    else:
+        st.info("Geen cashflowtabel, horizon is 0 jaar.")
+
+with tab_kosten:
+    kosten_left, kosten_center, kosten_right = st.columns([1, 4, 1])
+    with kosten_center:
         st.markdown(
-            f"<p class='bloei-note'>Betaalde kosten over de periode: "
-            f"<span class='{signed_class(-float(result.totale_kosten_betaald))}'>"
-            f"{fmt_eur(-float(result.totale_kosten_betaald))}</span></p>",
-            unsafe_allow_html=True,
-        )
-
-    with return_col4:
-        st.metric("Totale Impact Kosten", fmt_eur(-float(result.totale_kosten_impact)))
-        st.caption("Cumulatieve kosten + misgelopen rendement op rendement.")
-        st.markdown(
-            f"<p class='bloei-note'>Totale kostenimpact over de periode: "
-            f"<span class='{signed_class(-float(result.totale_kosten_impact))}'>"
-            f"{fmt_eur(-float(result.totale_kosten_impact))}</span></p>",
-            unsafe_allow_html=True,
-        )
-
-    df = pd.DataFrame({
-        "datum": [datetime.combine(d, datetime.min.time()) for d in result.tijdlijn_datums],
-        "vermogen_bruto": [float(v) for v in result.tijdlijn_vermogen_bruto],
-        "vermogen_netto": [float(v) for v in result.tijdlijn_vermogen_netto],
-        "vermogen_p10_netto": [float(v) for v in result.tijdlijn_vermogen_p10_netto],
-        "vermogen_p90_netto": [float(v) for v in result.tijdlijn_vermogen_p90_netto],
-        "cashflow_netto": [float(cf) for cf in result.tijdlijn_cashflow_netto],
-        "kosten_cumulatief_betaald": [float(v) for v in result.tijdlijn_kosten_cumulatief],
-        "profiel": list(result.tijdlijn_profiel),
-    })
-    df["kosten_impact_cumulatief"] = df["vermogen_bruto"] - df["vermogen_netto"]
-    df["kosten_misgelopen_rendement_cumulatief"] = (
-        df["kosten_impact_cumulatief"] - df["kosten_cumulatief_betaald"]
-    ).clip(lower=0.0)
-    df["tooltip_datum"] = df["datum"].dt.strftime("%b %Y")
-    df["tooltip_bruto"] = df["vermogen_bruto"].map(lambda x: fmt_eur(x, 2))
-    df["tooltip_netto"] = df["vermogen_netto"].map(lambda x: fmt_eur(x, 2))
-    df["tooltip_p10"] = df["vermogen_p10_netto"].map(lambda x: fmt_eur(x, 2))
-    df["tooltip_p90"] = df["vermogen_p90_netto"].map(lambda x: fmt_eur(x, 2))
-    df["tooltip_kosten_betaald"] = df["kosten_cumulatief_betaald"].map(lambda x: fmt_eur(-x, 2))
-    df["tooltip_kosten_impact"] = df["kosten_impact_cumulatief"].map(lambda x: fmt_eur(-x, 2))
-    df["tooltip_kosten_misgelopen"] = df["kosten_misgelopen_rendement_cumulatief"].map(lambda x: fmt_eur(-x, 2))
-
-    st.divider()
-    st.subheader("Tijdlijn")
-    tab_vermogensopbouw, tab_cashflow, tab_kosten = st.tabs(["Vermogensopbouw", "Cashflow", "Kosten"])
-
-    with tab_vermogensopbouw:
-        if len(df) <= 1:
-            st.info("Geen tijdlijn, horizon is 0 jaar.")
-        else:
-            chart_left, chart_center, chart_right = st.columns([1.2, 4.6, 1.2])
-            with chart_center:
-                base = alt.Chart(df)
-                y_min = float(df[["vermogen_p10_netto", "vermogen_netto", "vermogen_bruto"]].min().min())
-                y_max = float(df[["vermogen_p90_netto", "vermogen_netto", "vermogen_bruto"]].max().max())
-                y_padding = max((y_max - y_min) * 0.12, max(1.0, y_max * 0.03))
-                y_domain_min = max(0.0, y_min - y_padding)
-                y_domain_max = y_max + y_padding
-                chart_height = min(560, max(430, 300 + int(len(df) * 2.2)))
-                first_tick = df["datum"].iloc[0].to_pydatetime()
-                year_ticks = [datetime(year, 1, 1) for year in range(first_tick.year, df["datum"].iloc[-1].year + 1)]
-                if first_tick not in year_ticks:
-                    year_ticks.insert(0, first_tick)
-                x_year_axis = alt.X(
-                    "datum:T",
-                    title="Jaar",
-                    axis=alt.Axis(format="%Y", values=year_ticks, labelAngle=0),
-                )
-                
-                # Netto onzekerheidsband
-                band_netto = base.mark_area(opacity=0.15, color=BLOEI_PETROL).encode(
-                    x=x_year_axis,
-                    y=alt.Y(
-                        "vermogen_p10_netto:Q",
-                        title="Vermogen",
-                        scale=alt.Scale(domain=[y_domain_min, y_domain_max], nice=False, zero=False),
-                        axis=alt.Axis(format=",.0f", labelExpr="'€ ' + replace(datum.label, regexp(',', 'g'), '.')"),
-                    ),
-                    y2=alt.Y2("vermogen_p90_netto:Q"),
-                    tooltip=[
-                        alt.Tooltip("tooltip_datum:N", title="Periode"),
-                        alt.Tooltip("tooltip_p10:N", title="P10"),
-                        alt.Tooltip("tooltip_p90:N", title="P90"),
-                    ],
-                )
-                
-                # Lijnen: Bruto en Netto
-                line_bruto = base.mark_line(color=BLOEI_PINK, strokeDash=[6, 4], strokeWidth=2).encode(
-                    x=x_year_axis,
-                    y=alt.Y("vermogen_bruto:Q", scale=alt.Scale(domain=[y_domain_min, y_domain_max], nice=False, zero=False)),
-                    tooltip=[
-                        alt.Tooltip("tooltip_datum:N", title="Periode"),
-                        alt.Tooltip("tooltip_bruto:N", title="Bruto"),
-                    ],
-                )
-                line_netto = base.mark_line(color=BLOEI_PETROL, strokeWidth=4).encode(
-                    x=x_year_axis,
-                    y=alt.Y("vermogen_netto:Q", scale=alt.Scale(domain=[y_domain_min, y_domain_max], nice=False, zero=False)),
-                    tooltip=[
-                        alt.Tooltip("tooltip_datum:N", title="Periode"),
-                        alt.Tooltip("tooltip_netto:N", title="Netto"),
-                        alt.Tooltip("profiel:N", title="Profiel"),
-                    ],
-                )
-                
-                vermogen_chart = (band_netto + line_bruto + line_netto).properties(height=chart_height)
-                
-                st.altair_chart(vermogen_chart, use_container_width=True)
-                st.caption("Roze gestippeld: Bruto ontwikkeling | Petrol lijn + waaier: Netto ontwikkeling (P10/P90)")
-
-    with tab_cashflow:
-        if len(df) > 1:
-            df_work = df.copy()
-            df_work["maand_index"] = range(len(df_work))
-
-            jaar_nul = df_work.iloc[[0]].copy()
-            jaar_nul["Jaar"] = 0
-            jaar_nul["cashflow_netto"] = 0.0
-
-            df_periodiek = df_work[df_work["maand_index"] > 0].copy()
-            df_periodiek["Jaar"] = ((df_periodiek["maand_index"] - 1) // 12) + 1
-
-            yearly_end = (
-                df_periodiek.groupby("Jaar", as_index=False)
-                .agg(
-                    vermogen_bruto=("vermogen_bruto", "last"),
-                    vermogen_netto=("vermogen_netto", "last"),
-                    kosten_cumulatief_betaald=("kosten_cumulatief_betaald", "last"),
-                    kosten_misgelopen_rendement_cumulatief=("kosten_misgelopen_rendement_cumulatief", "last"),
-                    profiel=("profiel", "last"),
-                )
-            )
-            yearly_cashflow = (
-                df_periodiek.groupby("Jaar", as_index=False)
-                .agg(cashflow_netto=("cashflow_netto", "sum"))
-            )
-
-            df_year = yearly_end.merge(yearly_cashflow, on="Jaar", how="left")
-
-            jaar_nul_row = pd.DataFrame({
-                "Jaar": [0],
-                "vermogen_bruto": [float(jaar_nul["vermogen_bruto"].iloc[0])],
-                "vermogen_netto": [float(jaar_nul["vermogen_netto"].iloc[0])],
-                "cashflow_netto": [0.0],
-                "kosten_cumulatief_betaald": [0.0],
-                "kosten_misgelopen_rendement_cumulatief": [0.0],
-                "profiel": [jaar_nul["profiel"].iloc[0]],
-            })
-
-            df_year = pd.concat([jaar_nul_row, df_year], ignore_index=True)
-            df_year["Cumulatieve Kosten Impact"] = df_year["vermogen_bruto"] - df_year["vermogen_netto"]
-
-            for col in [
-                "vermogen_bruto",
-                "vermogen_netto",
-                "cashflow_netto",
-                "kosten_cumulatief_betaald",
-                "kosten_misgelopen_rendement_cumulatief",
-                "Cumulatieve Kosten Impact",
-            ]:
-                df_year[col] = df_year[col].map(lambda x: fmt_eur(x, 0))
-
-            st.dataframe(
-                df_year[
-                    [
-                        "Jaar",
-                        "vermogen_bruto",
-                        "vermogen_netto",
-                        "cashflow_netto",
-                        "kosten_cumulatief_betaald",
-                        "kosten_misgelopen_rendement_cumulatief",
-                        "Cumulatieve Kosten Impact",
-                        "profiel",
-                    ]
-                ].rename(
-                    columns={
-                        "vermogen_bruto": "Vermogen Bruto",
-                        "vermogen_netto": "Vermogen Netto",
-                        "cashflow_netto": "Netto Cashflow",
-                        "kosten_cumulatief_betaald": "Cumulatieve Kosten (excl. misgelopen rendement)",
-                        "kosten_misgelopen_rendement_cumulatief": "Cumulatief Misgelopen Rendement op Kosten",
-                    }
-                ),
-                hide_index=True,
-                use_container_width=True,
-            )
-        else:
-            st.info("Geen cashflowtabel, horizon is 0 jaar.")
-
-    with tab_kosten:
-        kosten_left, kosten_center, kosten_right = st.columns([1.2, 4.6, 1.2])
-        with kosten_center:
-            st.markdown(
-                f"""
-<h3 style="color:{BLOEI_PETROL}; margin:0 0 0.2rem;">Gemiddelde jaarlijkse kosten</h3>
+            f"""
+<h3 style="color:{BLOEI_PETROL}; margin:0 0 0.5rem; font-weight: 600;">Kosten Breakdown</h3>
 <table class="kosten-open-table">
   <thead>
     <tr>
       <th>Kostencomponent</th>
-      <th>Gemiddeld jaarlijks</th>
-      <th>Cumulatief gemiddeld</th>
+      <th>Gemiddeld per jaar (%)</th>
+      <th>Totaal in Euro's</th>
     </tr>
   </thead>
   <tbody>
@@ -610,13 +633,16 @@ if st.button("Bereken Prognose", type="primary", use_container_width=True):
       <td>{fmt_pct_nl(result.gemiddelde_spreadkosten_pct)}</td>
       <td>{fmt_eur(-float(result.totale_spreadkosten_betaald), 0)}</td>
     </tr>
-    <tr>
-      <td><strong>Totaal</strong></td>
+    <tr style="background-color: rgba(15, 73, 79, 0.05);">
+      <td><strong>Totaal betaald</strong></td>
       <td><strong>{fmt_pct_nl(result.gemiddelde_totale_kosten_pct)}</strong></td>
       <td><strong>{fmt_eur(-float(result.totale_kosten_betaald), 0)}</strong></td>
     </tr>
   </tbody>
 </table>
+<p class="bloei-note" style="text-align: right; margin-top: 1rem;">
+  <em>Totale kosten impact inclusief misgelopen rendement: <strong>{fmt_eur(-float(result.totale_kosten_impact), 0)}</strong></em>
+</p>
 """,
-                unsafe_allow_html=True,
-            )
+            unsafe_allow_html=True,
+        )
