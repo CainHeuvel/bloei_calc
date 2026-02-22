@@ -108,7 +108,6 @@ if 'eenmalige_cashflows' not in st.session_state:
 
 st.set_page_config(
     page_title="Bloei Rekenmodule",
-    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -124,37 +123,34 @@ st.markdown(
     --bloei-positive: {POSITIVE_COLOR};
     --bloei-negative: {NEGATIVE_COLOR};
 }}
-/* Sidebar styling */
-[data-testid="stSidebar"] {{
-    background-color: #f8f9fa;
-}}
 /* Modern Metric Containers */
 div[data-testid="metric-container"] {{
-    background-color: #ffffff;
-    border: 1px solid rgba(15, 73, 79, 0.1);
+    background-color: var(--secondary-background-color);
+    border: 1px solid rgba(128, 128, 128, 0.2);
     border-radius: 12px;
     padding: 1.25rem 1.5rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }}
 div[data-testid="metric-container"]:hover {{
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }}
 div[data-testid="metric-container"] label {{
-    color: #666666;
     font-weight: 500;
     font-size: 0.95rem;
+    opacity: 0.8;
 }}
 div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
-    color: var(--bloei-petrol);
+    color: var(--primary-color);
     font-weight: 700;
     font-size: 2.2rem;
 }}
 .bloei-note {{
     margin: 0.5rem 0 0;
     font-size: 0.9rem;
-    color: #777;
+    color: var(--text-color);
+    opacity: 0.7;
 }}
 .bloei-positive {{
     color: var(--bloei-positive);
@@ -168,18 +164,18 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
     width: 100%;
     margin: 1rem 0;
     border-collapse: collapse;
-    color: var(--bloei-petrol);
+    color: var(--text-color);
 }}
 .kosten-open-table th {{
     text-align: left;
     font-size: 0.95rem;
     font-weight: 600;
     padding: 0.75rem 0.5rem;
-    border-bottom: 2px solid rgba(15, 73, 79, 0.1);
+    border-bottom: 2px solid rgba(128, 128, 128, 0.2);
 }}
 .kosten-open-table td {{
     padding: 0.75rem 0.5rem;
-    border-bottom: 1px solid rgba(15, 73, 79, 0.05);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
 }}
 .kosten-open-table th:last-child,
 .kosten-open-table td:last-child {{
@@ -194,7 +190,7 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
 # SIDEBAR: Input Parameters
 # ==========================================
 with st.sidebar:
-    st.title("⚙️ Parameters")
+    st.title("Parameters")
     
     startvermogen = currency_text_input(
         "Startvermogen (€)",
@@ -210,7 +206,7 @@ with st.sidebar:
     
     profiel_opties = allowed_profielen_for_horizon(int(horizon_jaren))
     
-    with st.expander("📈 Profiel & Simulatie"):
+    with st.expander("Profiel & Simulatie"):
         afbouw_profiel = st.checkbox("Afbouw profiel o.b.v. horizon", value=False)
         
         if not afbouw_profiel:
@@ -232,7 +228,7 @@ with st.sidebar:
             
         n_scenarios = st.number_input("Aantal marktsimulaties", min_value=100, value=5000, step=100)
 
-    with st.expander("🔄 Periodieke Cashflows"):
+    with st.expander("Periodieke Cashflows"):
         periodieke_storting = currency_text_input("Maandelijkse Storting (€)", key="periodieke_storting", default=0.0)
         storting_beperken = st.checkbox("Beperk storting tot periode")
         if storting_beperken and periodieke_storting > 0:
@@ -253,14 +249,14 @@ with st.sidebar:
             periodieke_onttrekking_startdatum = None
             periodieke_onttrekking_einddatum = None
 
-    with st.expander("🎯 Eenmalige Cashflows"):
+    with st.expander("Eenmalige Cashflows"):
         if st.session_state.eenmalige_cashflows:
             for idx, cf in enumerate(st.session_state.eenmalige_cashflows):
                 cf_col1, cf_col2 = st.columns([3, 1])
                 with cf_col1:
-                    st.write(f"{'➕' if cf.type == 'storting' else '➖'} €{cf.bedrag:,.0f} op {cf.datum.strftime('%d-%m-%y')}")
+                    st.write(f"{'+' if cf.type == 'storting' else '-'} €{cf.bedrag:,.0f} op {cf.datum.strftime('%d-%m-%y')}")
                 with cf_col2:
-                    if st.button("🗑️", key=f"delete_{idx}"):
+                    if st.button("Verwijder", key=f"delete_{idx}"):
                         st.session_state.eenmalige_cashflows.pop(idx)
                         st.rerun()
             st.divider()
@@ -366,7 +362,7 @@ df["tooltip_p90"] = df["vermogen_p90_netto"].map(lambda x: fmt_eur(x, 0))
 
 
 tab_vermogensopbouw, tab_waterfall, tab_cashflow, tab_kosten = st.tabs([
-    "📈 Vermogensopbouw", "🌊 Reis van uw geld", "💶 Cashflow Tabel", "📉 Kosten Breakdown"
+    "Vermogensopbouw", "Reis van uw geld", "Cashflow Tabel", "Kosten Breakdown"
 ])
 
 with tab_vermogensopbouw:
