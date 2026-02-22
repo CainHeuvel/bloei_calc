@@ -17,6 +17,9 @@ BLOEI_WARMGREY = "#eeeae9"
 POSITIVE_COLOR = "#1db09e"
 NEGATIVE_COLOR = "#b34025"
 
+# Geoptimaliseerde kleuren voor dark mode (beter contrast)
+DARK_MODE_PETROL = "#3bbcc9"
+
 # Profile ordering (offensive -> defensive)
 PROFIEL_ORDER = ["Zeer offensief", "Offensief", "Neutraal", "Matig defensief", "Defensief", "Niet beleggen"]
 
@@ -121,9 +124,34 @@ st.set_page_config(
 st.markdown(
     f"""
 <style>
+/* Reset button color to petrol globally, regardless of environment */
+div.stButton > button:first-child {{
+    background-color: var(--bloei-petrol) !important;
+    color: white !important;
+    border-color: var(--bloei-petrol) !important;
+}}
+div.stButton > button:first-child:hover {{
+    background-color: #0c393e !important;
+    border-color: #0c393e !important;
+    color: white !important;
+}}
+div.stButton > button:first-child:active {{
+    background-color: #092e32 !important;
+    border-color: #092e32 !important;
+    color: white !important;
+}}
+/* Reset slider color to petrol */
+div.stSlider > div[data-baseweb="slider"] > div > div > div:first-child {
+    background-color: var(--bloei-petrol) !important;
+}
+div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {
+    background-color: var(--bloei-petrol) !important;
+    border-color: var(--bloei-petrol) !important;
+}
 :root {{
     --bloei-pink: {BLOEI_PINK};
     --bloei-petrol: {BLOEI_PETROL};
+    --bloei-dark-petrol: {DARK_MODE_PETROL};
     --bloei-warmgrey: {BLOEI_WARMGREY};
     --bloei-positive: {POSITIVE_COLOR};
     --bloei-negative: {NEGATIVE_COLOR};
@@ -187,46 +215,57 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
     text-align: right;
 }}
 
-/* Optimalisaties voor Dark Mode: Lichte achtergronden voor leesbaarheid van Petrol */
+/* Optimalisaties voor Dark Mode: Lichte tekst en kleuren voor donkere achtergronden */
 @media (prefers-color-scheme: dark) {{
-    [data-testid="stVegaLiteChart"] {{
-        background-color: var(--bloei-warmgrey);
-        padding: 1rem;
-        border-radius: 8px;
-    }}
-    [data-testid="stDataFrame"] > div {{
-        background-color: var(--bloei-warmgrey);
-        border-radius: 8px;
-        padding: 0.5rem;
-    }}
-    .kosten-open-table {{
-        background-color: var(--bloei-warmgrey);
-        padding: 1rem;
-        border-radius: 8px;
-        color: #31333F !important;
-    }}
-    .kosten-open-table th, .kosten-open-table td {{
-        border-bottom-color: rgba(0, 0, 0, 0.1) !important;
-    }}
     div[data-testid="metric-container"] {{
-        background-color: var(--bloei-warmgrey) !important;
-        border-color: rgba(0, 0, 0, 0.1) !important;
+        border-color: rgba(255, 255, 255, 0.1);
+        background-color: transparent !important;
     }}
     div[data-testid="metric-container"] label,
     .bloei-note {{
-        color: #555555 !important;
+        color: #e0e0e0 !important;
     }}
     div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
-        color: var(--bloei-petrol) !important;
+        color: var(--bloei-dark-petrol) !important;
     }}
     .bloei-title-petrol {{
-        color: var(--bloei-petrol) !important;
+        color: var(--bloei-dark-petrol) !important;
+    }}
+    .kosten-open-table th {{
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }}
+    .kosten-open-table td {{
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    /* Fix slider colors for dark mode */
+    div.stSlider > div[data-baseweb="slider"] > div > div > div:first-child {{
+        background-color: var(--bloei-dark-petrol) !important;
+    }}
+    div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {{
+        background-color: var(--bloei-dark-petrol) !important;
+        border-color: var(--bloei-dark-petrol) !important;
+    }}
+    /* Reset button color for dark mode */
+    div.stButton > button:first-child {{
+        background-color: var(--bloei-dark-petrol) !important;
+        border-color: var(--bloei-dark-petrol) !important;
+        color: #121212 !important;
+    }}
+    div.stButton > button:first-child:hover {{
+        background-color: #45c4d1 !important;
+        border-color: #45c4d1 !important;
+        color: #121212 !important;
+    }}
+    div.stButton > button:first-child:active {{
+        background-color: #55d0dd !important;
+        border-color: #55d0dd !important;
+        color: #121212 !important;
     }}
     .highlight-row {{
-        background-color: rgba(15, 73, 79, 0.1) !important;
+        background-color: rgba(59, 188, 201, 0.15) !important;
     }}
 }}
-.bloei-title-petrol {{
+.bloei-title-petrol {
     color: var(--bloei-petrol);
     margin: 0 0 0.5rem;
     font-weight: 600;
@@ -456,7 +495,7 @@ with tab_vermogensopbouw:
         layers = []
         
         if show_p10_p90:
-            band_netto = base.mark_area(opacity=0.15, color=BLOEI_PETROL).encode(
+            band_netto = base.mark_area(opacity=0.15, color=DARK_MODE_PETROL).encode(
                 x=x_year_axis,
                 y=alt.Y("vermogen_p10_netto:Q"),
                 y2=alt.Y2("vermogen_p90_netto:Q"),
@@ -480,7 +519,10 @@ with tab_vermogensopbouw:
             )
             layers.append(line_bruto)
 
-        line_netto = base.mark_line(color=BLOEI_PETROL, strokeWidth=4).encode(
+        line_netto = base.mark_line(
+            color=DARK_MODE_PETROL, 
+            strokeWidth=4
+        ).encode(
             x=x_year_axis,
             y=y_axis,
             tooltip=[
@@ -560,7 +602,7 @@ with tab_waterfall:
     wf_data['tooltip_amount'] = wf_data['amount'].map(lambda x: fmt_eur(x, 0))
     
     domain = ["Startvermogen"]
-    range_ = [BLOEI_PETROL]
+    range_ = [DARK_MODE_PETROL]
     
     if totale_stortingen > 0:
         domain.append("Stortingen")
