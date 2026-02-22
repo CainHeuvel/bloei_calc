@@ -119,10 +119,10 @@ def _safe_stat_percentile(values: np.ndarray, pct: float) -> float:
     return _safe_float(float(np.percentile(values, pct)))
 
 
-def _bereken_maandkosten(waarde: float) -> float:
-    """Berekent de kosten (beheer, fonds, spread) voor 1 maand over de actuele waarde."""
+def _bereken_maandkosten_componenten(waarde: float) -> tuple[float, float, float]:
+    """Berekent maandkosten uitgesplitst naar (beheer, fonds, spread)."""
     if waarde <= 0:
-        return 0.0
+        return (0.0, 0.0, 0.0)
 
     TIER_1_MAX = 100_000.0
     TIER_2_MAX = 1_000_000.0
@@ -147,10 +147,19 @@ def _bereken_maandkosten(waarde: float) -> float:
     if amount > 0:
         beheerkosten_jaar += amount * BEHEERKOSTEN_TIER_3
 
-    fondsen_en_spread_jaar = waarde * (FONDSKOSTEN + SPREADKOSTEN)
-    totale_jaarkosten = beheerkosten_jaar + fondsen_en_spread_jaar
-    
-    return totale_jaarkosten / 12.0
+    fondskosten_jaar = waarde * FONDSKOSTEN
+    spreadkosten_jaar = waarde * SPREADKOSTEN
+    return (
+        _safe_float(beheerkosten_jaar / 12.0),
+        _safe_float(fondskosten_jaar / 12.0),
+        _safe_float(spreadkosten_jaar / 12.0),
+    )
+
+
+def _bereken_maandkosten(waarde: float) -> float:
+    """Berekent de totale kosten (beheer, fonds, spread) voor 1 maand."""
+    beheer, fonds, spread = _bereken_maandkosten_componenten(waarde)
+    return _safe_float(beheer + fonds + spread)
 
 
 @dataclass
@@ -159,9 +168,15 @@ class _ScenarioResult:
     end_value_netto: float
     realized_deposits: float
     realized_withdrawals: float
+    total_costs_paid: float
+    total_management_costs_paid: float
+    total_fund_costs_paid: float
+    total_spread_costs_paid: float
+    costs_base_sum: float
     monthly_values_bruto: list[float]
     monthly_values_netto: list[float]
     monthly_net_cashflow: list[float]
+    monthly_cumulative_costs: list[float]
 
 
 def _simulate_single_scenario(
@@ -183,10 +198,16 @@ def _simulate_single_scenario(
     current_netto = float(inp.startvermogen)
     realized_deposits = float(inp.startvermogen)
     realized_withdrawals = 0.0
+    total_costs_paid = 0.0
+    total_management_costs_paid = 0.0
+    total_fund_costs_paid = 0.0
+    total_spread_costs_paid = 0.0
+    costs_base_sum = 0.0
     
     monthly_values_bruto = [current_bruto]
     monthly_values_netto = [current_netto]
     monthly_net_cashflow = [0.0]
+    monthly_cumulative_costs = [0.0]
 
     if total_months == 0:
         return _ScenarioResult(
@@ -194,9 +215,15 @@ def _simulate_single_scenario(
             end_value_netto=current_netto,
             realized_deposits=realized_deposits,
             realized_withdrawals=realized_withdrawals,
+            total_costs_paid=total_costs_paid,
+            total_management_costs_paid=total_management_costs_paid,
+            total_fund_costs_paid=total_fund_costs_paid,
+            total_spread_costs_paid=total_spread_costs_paid,
+            costs_base_sum=costs_base_sum,
             monthly_values_bruto=monthly_values_bruto,
             monthly_values_netto=monthly_values_netto,
             monthly_net_cashflow=monthly_net_cashflow,
+            monthly_cumulative_costs=monthly_cumulative_costs,
         )
 
     for month in range(1, total_months + 1):
@@ -236,8 +263,14 @@ def _simulate_single_scenario(
         current_netto *= (1.0 + r_month)
 
         # 4. Kosten dynamisch afschrijven (ALLEEN op netto)
-        kosten_deze_maand = _bereken_maandkosten(current_netto)
+        costs_base_sum += _safe_float(current_netto)
+        kosten_beheer, kosten_fonds, kosten_spread = _bereken_maandkosten_componenten(current_netto)
+        kosten_deze_maand = kosten_beheer + kosten_fonds + kosten_spread
         current_netto -= kosten_deze_maand
+        total_management_costs_paid += _safe_float(kosten_beheer)
+        total_fund_costs_paid += _safe_float(kosten_fonds)
+        total_spread_costs_paid += _safe_float(kosten_spread)
+        total_costs_paid += _safe_float(kosten_deze_maand)
 
         # 5. Periodic flows at END of month
         if inp.periodieke_storting_maandelijks > 0 and storting_start_idx <= month <= storting_end_idx:
@@ -261,15 +294,22 @@ def _simulate_single_scenario(
         monthly_values_bruto.append(current_bruto)
         monthly_values_netto.append(current_netto)
         monthly_net_cashflow.append(_safe_float(net_cashflow_month))
+        monthly_cumulative_costs.append(_safe_float(total_costs_paid))
 
     return _ScenarioResult(
         end_value_bruto=current_bruto,
         end_value_netto=current_netto,
         realized_deposits=realized_deposits,
         realized_withdrawals=realized_withdrawals,
+        total_costs_paid=_safe_float(total_costs_paid),
+        total_management_costs_paid=_safe_float(total_management_costs_paid),
+        total_fund_costs_paid=_safe_float(total_fund_costs_paid),
+        total_spread_costs_paid=_safe_float(total_spread_costs_paid),
+        costs_base_sum=_safe_float(costs_base_sum),
         monthly_values_bruto=monthly_values_bruto,
         monthly_values_netto=monthly_values_netto,
         monthly_net_cashflow=monthly_net_cashflow,
+        monthly_cumulative_costs=monthly_cumulative_costs,
     )
 
 
@@ -356,6 +396,12 @@ def bereken_kosten(inp: RekenInput) -> RekenOutput:
     monthly_paths_bruto_arr = np.array([r.monthly_values_bruto for r in scenario_results], dtype=float)
     monthly_paths_netto_arr = np.array([r.monthly_values_netto for r in scenario_results], dtype=float)
     monthly_net_cashflow_arr = np.array([r.monthly_net_cashflow for r in scenario_results], dtype=float)
+    total_costs_paid_arr = np.array([r.total_costs_paid for r in scenario_results], dtype=float)
+    total_management_costs_paid_arr = np.array([r.total_management_costs_paid for r in scenario_results], dtype=float)
+    total_fund_costs_paid_arr = np.array([r.total_fund_costs_paid for r in scenario_results], dtype=float)
+    total_spread_costs_paid_arr = np.array([r.total_spread_costs_paid for r in scenario_results], dtype=float)
+    costs_base_sum_arr = np.array([r.costs_base_sum for r in scenario_results], dtype=float)
+    monthly_cumulative_costs_arr = np.array([r.monthly_cumulative_costs for r in scenario_results], dtype=float)
 
     # Statistieken berekenen
     verwacht_eindvermogen_bruto = _safe_stat_mean(end_values_bruto_arr)
@@ -367,6 +413,25 @@ def bereken_kosten(inp: RekenInput) -> RekenOutput:
     
     verwachte_winst_bruto = _safe_stat_mean(profits_bruto_arr)
     verwachte_winst_netto = _safe_stat_mean(profits_netto_arr)
+    totale_kosten_betaald = _safe_stat_mean(total_costs_paid_arr)
+    totale_kosten_impact = max(0.0, verwacht_eindvermogen_bruto - verwacht_eindvermogen_netto)
+    misgelopen_rendement_op_kosten = max(0.0, totale_kosten_impact - totale_kosten_betaald)
+    totale_beheerkosten_betaald = _safe_stat_mean(total_management_costs_paid_arr)
+    totale_fondskosten_betaald = _safe_stat_mean(total_fund_costs_paid_arr)
+    totale_spreadkosten_betaald = _safe_stat_mean(total_spread_costs_paid_arr)
+
+    costs_base_sum = _safe_stat_mean(costs_base_sum_arr)
+    if costs_base_sum > 0:
+        gemiddelde_beheerkosten_pct = _safe_float((totale_beheerkosten_betaald * 12.0 / costs_base_sum) * 100.0)
+        gemiddelde_fondskosten_pct = _safe_float((totale_fondskosten_betaald * 12.0 / costs_base_sum) * 100.0)
+        gemiddelde_spreadkosten_pct = _safe_float((totale_spreadkosten_betaald * 12.0 / costs_base_sum) * 100.0)
+    else:
+        gemiddelde_beheerkosten_pct = 0.0
+        gemiddelde_fondskosten_pct = 0.0
+        gemiddelde_spreadkosten_pct = 0.0
+    gemiddelde_totale_kosten_pct = _safe_float(
+        gemiddelde_beheerkosten_pct + gemiddelde_fondskosten_pct + gemiddelde_spreadkosten_pct
+    )
 
     # Tijdlijnen
     tijdlijn_vermogen_bruto = [_safe_float(x) for x in np.mean(monthly_paths_bruto_arr, axis=0)]
@@ -374,6 +439,7 @@ def bereken_kosten(inp: RekenInput) -> RekenOutput:
     tijdlijn_vermogen_p10_netto = [_safe_float(x) for x in np.percentile(monthly_paths_netto_arr, 10, axis=0)]
     tijdlijn_vermogen_p90_netto = [_safe_float(x) for x in np.percentile(monthly_paths_netto_arr, 90, axis=0)]
     tijdlijn_cashflow_netto = [_safe_float(x) for x in np.mean(monthly_net_cashflow_arr, axis=0)]
+    tijdlijn_kosten_cumulatief = [_safe_float(x) for x in np.mean(monthly_cumulative_costs_arr, axis=0)]
 
     tijdlijn_datums = [_add_months(inp.startdatum, month) for month in range(0, total_months + 1)]
     tijdlijn_profiel = [start_profiel]
@@ -390,7 +456,16 @@ def bereken_kosten(inp: RekenInput) -> RekenOutput:
         
         verwacht_eindvermogen_bruto=max(0.0, verwacht_eindvermogen_bruto),
         verwacht_eindvermogen_netto=max(0.0, verwacht_eindvermogen_netto),
-        totale_kosten_impact=max(0.0, verwacht_eindvermogen_bruto - verwacht_eindvermogen_netto),
+        totale_kosten_betaald=max(0.0, totale_kosten_betaald),
+        misgelopen_rendement_op_kosten=max(0.0, misgelopen_rendement_op_kosten),
+        totale_kosten_impact=max(0.0, totale_kosten_impact),
+        totale_beheerkosten_betaald=max(0.0, totale_beheerkosten_betaald),
+        totale_fondskosten_betaald=max(0.0, totale_fondskosten_betaald),
+        totale_spreadkosten_betaald=max(0.0, totale_spreadkosten_betaald),
+        gemiddelde_beheerkosten_pct=max(0.0, gemiddelde_beheerkosten_pct),
+        gemiddelde_fondskosten_pct=max(0.0, gemiddelde_fondskosten_pct),
+        gemiddelde_spreadkosten_pct=max(0.0, gemiddelde_spreadkosten_pct),
+        gemiddelde_totale_kosten_pct=max(0.0, gemiddelde_totale_kosten_pct),
         
         verwachte_winst_bruto=_safe_float(verwachte_winst_bruto),
         verwachte_winst_netto=_safe_float(verwachte_winst_netto),
@@ -406,4 +481,5 @@ def bereken_kosten(inp: RekenInput) -> RekenOutput:
         tijdlijn_vermogen_p90_netto=tijdlijn_vermogen_p90_netto,
         tijdlijn_profiel=tijdlijn_profiel,
         tijdlijn_cashflow_netto=tijdlijn_cashflow_netto,
+        tijdlijn_kosten_cumulatief=tijdlijn_kosten_cumulatief,
     )

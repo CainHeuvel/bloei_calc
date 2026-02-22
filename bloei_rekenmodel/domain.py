@@ -104,7 +104,16 @@ class RekenOutput:
     # MiFID II uitsplitsing
     verwacht_eindvermogen_bruto: float
     verwacht_eindvermogen_netto: float
+    totale_kosten_betaald: float
+    misgelopen_rendement_op_kosten: float
     totale_kosten_impact: float
+    totale_beheerkosten_betaald: float
+    totale_fondskosten_betaald: float
+    totale_spreadkosten_betaald: float
+    gemiddelde_beheerkosten_pct: float
+    gemiddelde_fondskosten_pct: float
+    gemiddelde_spreadkosten_pct: float
+    gemiddelde_totale_kosten_pct: float
     
     verwachte_winst_bruto: float
     verwachte_winst_netto: float
@@ -120,3 +129,4 @@ class RekenOutput:
     tijdlijn_vermogen_p90_netto: List[float]
     tijdlijn_profiel: List[str]
     tijdlijn_cashflow_netto: List[float]
+    tijdlijn_kosten_cumulatief: List[float]
