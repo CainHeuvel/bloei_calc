@@ -124,14 +124,14 @@ st.set_page_config(
 st.markdown(
     f"""
 <style>
-:root {
+:root {{
     --bloei-pink: {BLOEI_PINK};
     --bloei-petrol: {BLOEI_PETROL};
     --bloei-dark-petrol: {DARK_MODE_PETROL};
     --bloei-warmgrey: {BLOEI_WARMGREY};
     --bloei-positive: {POSITIVE_COLOR};
     --bloei-negative: {NEGATIVE_COLOR};
-}
+}}
 </style>
 """ + """
 <style>
