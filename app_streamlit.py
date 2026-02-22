@@ -6,6 +6,13 @@ from bloei_rekenmodel import RekenInput, bereken_kosten, EenmaligeCashflow
 import altair as alt
 import pandas as pd
 
+# Bloei huisstijlkleuren
+BLOEI_PINK = "#ff787c"
+BLOEI_PETROL = "#0f494f"
+BLOEI_WARMGREY = "#eeeae9"
+POSITIVE_COLOR = "#1db09e"
+NEGATIVE_COLOR = "#b34025"
+
 # Profile ordering (offensive -> defensive)
 PROFIEL_ORDER = ["Zeer offensief", "Offensief", "Neutraal", "Matig defensief", "Defensief", "Niet beleggen"]
 
@@ -30,6 +37,65 @@ def default_profiel_for_horizon(horizon_jaren: int) -> str:
     opts = allowed_profielen_for_horizon(horizon_jaren)
     return opts[0]
 
+def fmt_nl_number(amount: float, decimals: int = 2) -> str:
+    us = f"{float(amount):,.{decimals}f}"
+    return us.replace(",", "_").replace(".", ",").replace("_", ".")
+
+def fmt_eur_nl(amount: float, decimals: int = 2) -> str:
+    return "€ " + fmt_nl_number(amount, decimals)
+
+def parse_nl_number(raw: str) -> float:
+    cleaned = raw.strip().replace("€", "").replace("EUR", "").replace("eur", "").replace(" ", "")
+    if cleaned == "":
+        raise ValueError("Leeg bedrag")
+    if "," in cleaned:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+    elif cleaned.count(".") > 1:
+        cleaned = cleaned.replace(".", "")
+    return float(cleaned)
+
+def _sync_currency_input(display_key: str, value_key: str, min_value: float, decimals: int) -> None:
+    try:
+        value = parse_nl_number(st.session_state[display_key])
+        if value < min_value:
+            raise ValueError("Onder minimum")
+        st.session_state[value_key] = value
+        st.session_state[display_key] = fmt_nl_number(value, decimals)
+        st.session_state[f"{display_key}_error"] = ""
+    except Exception:
+        st.session_state[f"{display_key}_error"] = "Gebruik formaat zoals 100.000,00."
+
+def currency_text_input(
+    label: str,
+    *,
+    key: str,
+    default: float,
+    min_value: float = 0.0,
+    decimals: int = 2,
+) -> float:
+    display_key = f"{key}_display"
+    value_key = f"{key}_value"
+    error_key = f"{display_key}_error"
+
+    if value_key not in st.session_state:
+        st.session_state[value_key] = float(default)
+    if display_key not in st.session_state:
+        st.session_state[display_key] = fmt_nl_number(default, decimals)
+    if error_key not in st.session_state:
+        st.session_state[error_key] = ""
+
+    st.text_input(
+        label,
+        key=display_key,
+        on_change=_sync_currency_input,
+        args=(display_key, value_key, min_value, decimals),
+    )
+
+    if st.session_state[error_key]:
+        st.error(st.session_state[error_key])
+
+    return float(st.session_state[value_key])
+
 def _add_years(d: date, years: int) -> date:
     try:
         return d.replace(year=d.year + years)
@@ -45,6 +111,43 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown(
+    f"""
+<style>
+:root {{
+    --bloei-pink: {BLOEI_PINK};
+    --bloei-petrol: {BLOEI_PETROL};
+    --bloei-warmgrey: {BLOEI_WARMGREY};
+    --bloei-positive: {POSITIVE_COLOR};
+    --bloei-negative: {NEGATIVE_COLOR};
+}}
+div[data-testid="metric-container"] {{
+    background-color: var(--bloei-warmgrey);
+    border: 1px solid rgba(15, 73, 79, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+}}
+div[data-testid="metric-container"] label,
+div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
+    color: var(--bloei-petrol);
+}}
+.bloei-note {{
+    margin: 0.35rem 0 0;
+    font-size: 0.95rem;
+}}
+.bloei-positive {{
+    color: var(--bloei-positive);
+    font-weight: 600;
+}}
+.bloei-negative {{
+    color: var(--bloei-negative);
+    font-weight: 600;
+}}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 st.title("Bloei Rekenmodule")
 
 st.header("Input Parameters")
@@ -52,12 +155,11 @@ st.header("Input Parameters")
 col1, col2 = st.columns(2)
 
 with col1:
-    startvermogen = st.number_input(
+    startvermogen = currency_text_input(
         "Startvermogen (€)",
+        key="startvermogen",
+        default=100000.0,
         min_value=0.01,
-        value=100000.0,
-        step=1000.0,
-        format="%.2f",
     )
 
 with col2:
@@ -130,12 +232,11 @@ cashflow_col1, cashflow_col2 = st.columns(2)
 
 with cashflow_col1:
     st.subheader("Periodieke Cashflows")
-    periodieke_storting = st.number_input(
+    periodieke_storting = currency_text_input(
         "Periodieke Storting (EUR/maand)",
+        key="periodieke_storting",
+        default=0.0,
         min_value=0.0,
-        value=0.0,
-        step=100.0,
-        format="%.2f",
     )
 
     storting_beperken = st.checkbox("Beperk periodieke storting tot periode")
@@ -149,12 +250,11 @@ with cashflow_col1:
         periodieke_storting_startdatum = None
         periodieke_storting_einddatum = None
     
-    periodieke_onttrekking = st.number_input(
+    periodieke_onttrekking = currency_text_input(
         "Periodieke Onttrekking (EUR/maand)",
+        key="periodieke_onttrekking",
+        default=0.0,
         min_value=0.0,
-        value=0.0,
-        step=100.0,
-        format="%.2f",
     )
 
     onttrekking_beperken = st.checkbox("Beperk periodieke onttrekking tot periode")
@@ -190,8 +290,9 @@ with cashflow_col2:
     st.write("**Nieuwe cashflow toevoegen:**")
     with st.form("add_cashflow_form", clear_on_submit=True):
         new_col1, new_col2, new_col3, new_col4 = st.columns([2.5, 2, 2.5, 1])
+        new_bedrag = 0.0
         with new_col1:
-            new_bedrag = st.number_input("1. Bedrag (€)", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
+            new_bedrag_raw = st.text_input("1. Bedrag (€)", value="0,00")
         with new_col2:
             new_type = st.selectbox("2. Type", options=["storting", "onttrekking"])
         with new_col3:
@@ -201,9 +302,16 @@ with cashflow_col2:
             st.write("")
             add_button = st.form_submit_button("➕", use_container_width=True)
         
-        if add_button and new_bedrag > 0:
-            st.session_state.eenmalige_cashflows.append(EenmaligeCashflow(bedrag=new_bedrag, datum=new_datum, type=new_type))
-            st.rerun()
+        if add_button:
+            try:
+                new_bedrag = parse_nl_number(new_bedrag_raw)
+            except Exception:
+                st.error("Voer een geldig bedrag in, bijvoorbeeld 100.000,00.")
+                new_bedrag = 0.0
+
+            if new_bedrag > 0:
+                st.session_state.eenmalige_cashflows.append(EenmaligeCashflow(bedrag=new_bedrag, datum=new_datum, type=new_type))
+                st.rerun()
     
     eenmalige_cashflows_list = st.session_state.eenmalige_cashflows.copy()
 
@@ -233,23 +341,40 @@ if st.button("Bereken Prognose", type="primary", use_container_width=True):
     return_col1, return_col2, return_col3 = st.columns(3)
 
     def fmt_eur(amount: float, decimals: int = 2) -> str:
-        us = f"{amount:,.{decimals}f}"
-        return "€ " + us.replace(",", "_").replace(".", ",").replace("_", ".")
+        return fmt_eur_nl(amount, decimals)
     
+    def signed_class(amount: float) -> str:
+        return "bloei-positive" if amount >= 0 else "bloei-negative"
+
     with return_col1:
         st.metric("Eindvermogen Bruto (zonder kosten)", fmt_eur(result.verwacht_eindvermogen_bruto))
         st.caption("Fictieve ontwikkeling puur op basis van marktrendement.")
-        st.info(f"Bruto eindwaarde: {fmt_eur(result.verwacht_eindvermogen_bruto)}")
+        st.markdown(
+            f"<p class='bloei-note'>Bruto eindwaarde: "
+            f"<span class='{signed_class(result.verwacht_eindvermogen_bruto)}'>"
+            f"{fmt_eur(result.verwacht_eindvermogen_bruto)}</span></p>",
+            unsafe_allow_html=True,
+        )
         
     with return_col2:
         st.metric("Eindvermogen Netto (na kosten)", fmt_eur(result.verwacht_eindvermogen_netto))
         st.caption(f"P10: {fmt_eur(result.verwacht_eindvermogen_p10_netto)} | P50: {fmt_eur(result.verwacht_eindvermogen_p50_netto)} | P90: {fmt_eur(result.verwacht_eindvermogen_p90_netto)}")
-        st.success(f"Verwachte netto eindwaarde: {fmt_eur(result.verwacht_eindvermogen_netto)}")
+        st.markdown(
+            f"<p class='bloei-note'>Verwachte netto eindwaarde: "
+            f"<span class='{signed_class(result.verwacht_eindvermogen_netto)}'>"
+            f"{fmt_eur(result.verwacht_eindvermogen_netto)}</span></p>",
+            unsafe_allow_html=True,
+        )
         
     with return_col3:
-        st.metric("Totale Impact Kosten", f"- {fmt_eur(result.totale_kosten_impact)}")
+        st.metric("Totale Impact Kosten", fmt_eur(-float(result.totale_kosten_impact)))
         st.caption("Cumulatieve kosten + misgelopen rendement op rendement.")
-        st.info(f"Totale kostenimpact over de periode: - {fmt_eur(result.totale_kosten_impact)}")
+        st.markdown(
+            f"<p class='bloei-note'>Totale kostenimpact over de periode: "
+            f"<span class='{signed_class(-float(result.totale_kosten_impact))}'>"
+            f"{fmt_eur(-float(result.totale_kosten_impact))}</span></p>",
+            unsafe_allow_html=True,
+        )
 
     df = pd.DataFrame({
         "datum": [datetime.combine(d, datetime.min.time()) for d in result.tijdlijn_datums],
@@ -277,7 +402,7 @@ if st.button("Bereken Prognose", type="primary", use_container_width=True):
             base = alt.Chart(df)
             
             # Netto onzekerheidsband
-            band_netto = base.mark_area(opacity=0.12, color="#6EA8FE").encode(
+            band_netto = base.mark_area(opacity=0.15, color=BLOEI_PETROL).encode(
                 x=alt.X("datum:T", title="Datum"),
                 y=alt.Y(
                     "vermogen_p10_netto:Q",
@@ -293,7 +418,7 @@ if st.button("Bereken Prognose", type="primary", use_container_width=True):
             )
             
             # Lijnen: Bruto en Netto
-            line_bruto = base.mark_line(color="#F59E0B", strokeDash=[4, 4], strokeWidth=2).encode(
+            line_bruto = base.mark_line(color=BLOEI_PINK, strokeDash=[6, 4], strokeWidth=2).encode(
                 x=alt.X("datum:T"),
                 y=alt.Y("vermogen_bruto:Q"),
                 tooltip=[
@@ -301,7 +426,7 @@ if st.button("Bereken Prognose", type="primary", use_container_width=True):
                     alt.Tooltip("tooltip_bruto:N", title="Bruto"),
                 ],
             )
-            line_netto = base.mark_line(color="#2563EB", strokeWidth=4).encode(
+            line_netto = base.mark_line(color=BLOEI_PETROL, strokeWidth=4).encode(
                 x=alt.X("datum:T"),
                 y=alt.Y("vermogen_netto:Q"),
                 tooltip=[
@@ -314,7 +439,7 @@ if st.button("Bereken Prognose", type="primary", use_container_width=True):
             vermogen_chart = (band_netto + line_bruto + line_netto).properties(height=350)
             
             st.altair_chart(vermogen_chart, use_container_width=True)
-            st.caption("🟠 Oranje gestippeld: Bruto ontwikkeling | 🔵 Blauwe lijn: Netto ontwikkeling (inclusief P10/P90 onzekerheid)")
+            st.caption("Roze gestippeld: Bruto ontwikkeling | Petrol lijn + waaier: Netto ontwikkeling (P10/P90)")
 
     with tab_tabel:
         if len(df) > 1:
