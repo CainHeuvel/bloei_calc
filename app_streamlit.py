@@ -1,4 +1,4 @@
-"""Streamlit UI for the Bloei Rekenmodule proof-of-concept."""
+"""Streamlit UI for the Bloei Rekenmodule."""
 
 import streamlit as st
 from datetime import date, datetime
@@ -45,7 +45,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Bloei Rekenmodule – PoC (MiFID II Compliant)")
+st.title("Bloei Rekenmodule")
 
 st.header("Input Parameters")
 
@@ -53,15 +53,11 @@ col1, col2 = st.columns(2)
 
 with col1:
     startvermogen = st.number_input(
-        "Startvermogen (EUR)",
+        "Startvermogen (€)",
         min_value=0.01,
         value=100000.0,
         step=1000.0,
-    )
-    
-    afbouw_profiel = st.checkbox(
-        "Afbouw profiel op basis van horizon",
-        value=False,
+        format="%.2f",
     )
 
 with col2:
@@ -77,8 +73,14 @@ with col2:
         value=10,
     )
     
+
+with st.expander("Geavanceerde Instellingen"):
+    afbouw_profiel = st.checkbox(
+        "Afbouw profiel op basis van horizon",
+        value=False,
+    )
     n_scenarios = st.number_input(
-        "Aantal Scenario's",
+        "Aantal marktsimulaties",
         min_value=1,
         value=5000,
         step=100,
@@ -133,6 +135,7 @@ with cashflow_col1:
         min_value=0.0,
         value=0.0,
         step=100.0,
+        format="%.2f",
     )
 
     storting_beperken = st.checkbox("Beperk periodieke storting tot periode")
@@ -151,6 +154,7 @@ with cashflow_col1:
         min_value=0.0,
         value=0.0,
         step=100.0,
+        format="%.2f",
     )
 
     onttrekking_beperken = st.checkbox("Beperk periodieke onttrekking tot periode")
@@ -187,7 +191,7 @@ with cashflow_col2:
     with st.form("add_cashflow_form", clear_on_submit=True):
         new_col1, new_col2, new_col3, new_col4 = st.columns([2.5, 2, 2.5, 1])
         with new_col1:
-            new_bedrag = st.number_input("1. Bedrag", min_value=0.0, value=0.0, step=1000.0)
+            new_bedrag = st.number_input("1. Bedrag (€)", min_value=0.0, value=0.0, step=1000.0, format="%.2f")
         with new_col2:
             new_type = st.selectbox("2. Type", options=["storting", "onttrekking"])
         with new_col3:
@@ -204,7 +208,7 @@ with cashflow_col2:
     eenmalige_cashflows_list = st.session_state.eenmalige_cashflows.copy()
 
 st.divider()
-if st.button("Bereken (MiFID II)", type="primary", use_container_width=True):
+if st.button("Bereken Prognose", type="primary", use_container_width=True):
     inp = RekenInput(
         startvermogen=startvermogen,
         profiel=profiel_input,
@@ -223,22 +227,29 @@ if st.button("Bereken (MiFID II)", type="primary", use_container_width=True):
     
     result = bereken_kosten(inp)
     
-    st.header("Resultaten (MiFID II)")
+    st.header("Verwachte Vermogensontwikkeling")
     
-    st.subheader(f"Verwacht Rendement (Monte Carlo: {inp.n_scenarios} scenario's)")
+    st.subheader("Resultaten op basis van historische marktsimulaties")
     return_col1, return_col2, return_col3 = st.columns(3)
+
+    def fmt_eur(amount: float, decimals: int = 2) -> str:
+        us = f"{amount:,.{decimals}f}"
+        return "€ " + us.replace(",", "_").replace(".", ",").replace("_", ".")
     
     with return_col1:
-        st.metric("Eindvermogen Bruto (zonder kosten)", f"€{result.verwacht_eindvermogen_bruto:,.2f}")
+        st.metric("Eindvermogen Bruto (zonder kosten)", fmt_eur(result.verwacht_eindvermogen_bruto))
         st.caption("Fictieve ontwikkeling puur op basis van marktrendement.")
+        st.info(f"Bruto eindwaarde: {fmt_eur(result.verwacht_eindvermogen_bruto)}")
         
     with return_col2:
-        st.metric("Eindvermogen Netto (na kosten)", f"€{result.verwacht_eindvermogen_netto:,.2f}")
-        st.caption(f"P10: €{result.verwacht_eindvermogen_p10_netto:,.2f} | P50: €{result.verwacht_eindvermogen_p50_netto:,.2f} | P90: €{result.verwacht_eindvermogen_p90_netto:,.2f}")
+        st.metric("Eindvermogen Netto (na kosten)", fmt_eur(result.verwacht_eindvermogen_netto))
+        st.caption(f"P10: {fmt_eur(result.verwacht_eindvermogen_p10_netto)} | P50: {fmt_eur(result.verwacht_eindvermogen_p50_netto)} | P90: {fmt_eur(result.verwacht_eindvermogen_p90_netto)}")
+        st.success(f"Verwachte netto eindwaarde: {fmt_eur(result.verwacht_eindvermogen_netto)}")
         
     with return_col3:
-        st.metric("Totale Impact Kosten", f"- €{result.totale_kosten_impact:,.2f}")
+        st.metric("Totale Impact Kosten", f"- {fmt_eur(result.totale_kosten_impact)}")
         st.caption("Cumulatieve kosten + misgelopen rendement op rendement.")
+        st.info(f"Totale kostenimpact over de periode: - {fmt_eur(result.totale_kosten_impact)}")
 
     df = pd.DataFrame({
         "datum": [datetime.combine(d, datetime.min.time()) for d in result.tijdlijn_datums],
@@ -249,8 +260,13 @@ if st.button("Bereken (MiFID II)", type="primary", use_container_width=True):
         "cashflow_netto": [float(cf) for cf in result.tijdlijn_cashflow_netto],
         "profiel": list(result.tijdlijn_profiel),
     })
+    df["tooltip_datum"] = df["datum"].dt.strftime("%b %Y")
+    df["tooltip_bruto"] = df["vermogen_bruto"].map(lambda x: fmt_eur(x, 2))
+    df["tooltip_netto"] = df["vermogen_netto"].map(lambda x: fmt_eur(x, 2))
+    df["tooltip_p10"] = df["vermogen_p10_netto"].map(lambda x: fmt_eur(x, 2))
+    df["tooltip_p90"] = df["vermogen_p90_netto"].map(lambda x: fmt_eur(x, 2))
 
-    st.divider()  # <--- HIER MISTEN WAARSCHIJNLIJK DE HAAKJES IN JOUW VERSIE
+    st.divider()
     st.subheader("Tijdlijn")
     tab_grafieken, tab_tabel = st.tabs(["Grafieken", "Tabellen"])
 
@@ -261,23 +277,38 @@ if st.button("Bereken (MiFID II)", type="primary", use_container_width=True):
             base = alt.Chart(df)
             
             # Netto onzekerheidsband
-            band_netto = base.mark_area(opacity=0.2, color="lightblue").encode(
+            band_netto = base.mark_area(opacity=0.12, color="#6EA8FE").encode(
                 x=alt.X("datum:T", title="Datum"),
-                y=alt.Y("vermogen_p10_netto:Q", title="Vermogen (EUR)"),
+                y=alt.Y(
+                    "vermogen_p10_netto:Q",
+                    title="Vermogen",
+                    axis=alt.Axis(format=",.0f", labelExpr="'€ ' + replace(datum.label, ',' , '.')"),
+                ),
                 y2=alt.Y2("vermogen_p90_netto:Q"),
-                tooltip=["datum:T", "vermogen_p10_netto:Q", "vermogen_p90_netto:Q"],
+                tooltip=[
+                    alt.Tooltip("tooltip_datum:N", title="Periode"),
+                    alt.Tooltip("tooltip_p10:N", title="P10"),
+                    alt.Tooltip("tooltip_p90:N", title="P90"),
+                ],
             )
             
             # Lijnen: Bruto en Netto
-            line_bruto = base.mark_line(color="orange", strokeDash=[4, 4], strokeWidth=2).encode(
+            line_bruto = base.mark_line(color="#F59E0B", strokeDash=[4, 4], strokeWidth=2).encode(
                 x=alt.X("datum:T"),
                 y=alt.Y("vermogen_bruto:Q"),
-                tooltip=["datum:T", "vermogen_bruto:Q"],
+                tooltip=[
+                    alt.Tooltip("tooltip_datum:N", title="Periode"),
+                    alt.Tooltip("tooltip_bruto:N", title="Bruto"),
+                ],
             )
-            line_netto = base.mark_line(color="steelblue", strokeWidth=3).encode(
+            line_netto = base.mark_line(color="#2563EB", strokeWidth=4).encode(
                 x=alt.X("datum:T"),
                 y=alt.Y("vermogen_netto:Q"),
-                tooltip=["datum:T", "vermogen_netto:Q", "profiel:N"],
+                tooltip=[
+                    alt.Tooltip("tooltip_datum:N", title="Periode"),
+                    alt.Tooltip("tooltip_netto:N", title="Netto"),
+                    alt.Tooltip("profiel:N", title="Profiel"),
+                ],
             )
             
             vermogen_chart = (band_netto + line_bruto + line_netto).properties(height=350)
@@ -287,11 +318,43 @@ if st.button("Bereken (MiFID II)", type="primary", use_container_width=True):
 
     with tab_tabel:
         if len(df) > 1:
-            total_months = len(df) - 1
-            year_end_idx = sorted(set([0] + [m for m in range(12, total_months + 1, 12)] + [total_months]))
-            df_year = df.loc[year_end_idx, ["datum", "vermogen_bruto", "vermogen_netto", "cashflow_netto", "profiel"]].copy()
-            df_year["datum"] = df_year["datum"].dt.date
-            
-            # Maak het mooi in MiFID II format
+            df_work = df.copy()
+            df_work["maand_index"] = range(len(df_work))
+
+            jaar_nul = df_work.iloc[[0]].copy()
+            jaar_nul["Jaar"] = 0
+            jaar_nul["cashflow_netto"] = 0.0
+
+            df_periodiek = df_work[df_work["maand_index"] > 0].copy()
+            df_periodiek["Jaar"] = ((df_periodiek["maand_index"] - 1) // 12) + 1
+
+            yearly_end = (
+                df_periodiek.groupby("Jaar", as_index=False)
+                .agg(
+                    vermogen_bruto=("vermogen_bruto", "last"),
+                    vermogen_netto=("vermogen_netto", "last"),
+                    profiel=("profiel", "last"),
+                )
+            )
+            yearly_cashflow = (
+                df_periodiek.groupby("Jaar", as_index=False)
+                .agg(cashflow_netto=("cashflow_netto", "sum"))
+            )
+
+            df_year = yearly_end.merge(yearly_cashflow, on="Jaar", how="left")
+
+            jaar_nul_row = pd.DataFrame({
+                "Jaar": [0],
+                "vermogen_bruto": [float(jaar_nul["vermogen_bruto"].iloc[0])],
+                "vermogen_netto": [float(jaar_nul["vermogen_netto"].iloc[0])],
+                "cashflow_netto": [0.0],
+                "profiel": [jaar_nul["profiel"].iloc[0]],
+            })
+
+            df_year = pd.concat([jaar_nul_row, df_year], ignore_index=True)
             df_year["Cumulatieve Kosten Impact"] = df_year["vermogen_bruto"] - df_year["vermogen_netto"]
-            st.table(df_year)
+
+            for col in ["vermogen_bruto", "vermogen_netto", "cashflow_netto", "Cumulatieve Kosten Impact"]:
+                df_year[col] = df_year[col].map(lambda x: fmt_eur(x, 0))
+
+            st.table(df_year[["Jaar", "vermogen_bruto", "vermogen_netto", "cashflow_netto", "Cumulatieve Kosten Impact", "profiel"]])
