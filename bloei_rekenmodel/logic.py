@@ -167,7 +167,8 @@ class _ScenarioResult:
     end_value_bruto: float
     end_value_netto: float
     realized_deposits: float
-    realized_withdrawals: float
+    realized_withdrawals_bruto: float
+    realized_withdrawals_netto: float
     total_costs_paid: float
     total_management_costs_paid: float
     total_fund_costs_paid: float
@@ -197,7 +198,8 @@ def _simulate_single_scenario(
     current_bruto = float(inp.startvermogen)
     current_netto = float(inp.startvermogen)
     realized_deposits = float(inp.startvermogen)
-    realized_withdrawals = 0.0
+    realized_withdrawals_bruto = 0.0
+    realized_withdrawals_netto = 0.0
     total_costs_paid = 0.0
     total_management_costs_paid = 0.0
     total_fund_costs_paid = 0.0
@@ -214,7 +216,8 @@ def _simulate_single_scenario(
             end_value_bruto=current_bruto,
             end_value_netto=current_netto,
             realized_deposits=realized_deposits,
-            realized_withdrawals=realized_withdrawals,
+            realized_withdrawals_bruto=realized_withdrawals_bruto,
+            realized_withdrawals_netto=realized_withdrawals_netto,
             total_costs_paid=total_costs_paid,
             total_management_costs_paid=total_management_costs_paid,
             total_fund_costs_paid=total_fund_costs_paid,
@@ -241,7 +244,8 @@ def _simulate_single_scenario(
                 withdrawal_netto = min(cashflow.bedrag, current_netto)
                 current_bruto -= withdrawal_bruto
                 current_netto -= withdrawal_netto
-                realized_withdrawals += withdrawal_netto # Basis voor rendement is netto opname
+                realized_withdrawals_bruto += withdrawal_bruto
+                realized_withdrawals_netto += withdrawal_netto # Basis voor rendement is netto opname
                 net_cashflow_month -= withdrawal_netto
 
         # 2. Profiel en rendement bepalen
@@ -284,7 +288,8 @@ def _simulate_single_scenario(
             withdrawal_netto = min(inp.periodieke_onttrekking_maandelijks, current_netto)
             current_bruto -= withdrawal_bruto
             current_netto -= withdrawal_netto
-            realized_withdrawals += withdrawal_netto
+            realized_withdrawals_bruto += withdrawal_bruto
+            realized_withdrawals_netto += withdrawal_netto
             net_cashflow_month -= withdrawal_netto
 
         # 6. Floor van nul euro afdwingen (aandelen kunnen niet negatief worden)
@@ -300,7 +305,8 @@ def _simulate_single_scenario(
         end_value_bruto=current_bruto,
         end_value_netto=current_netto,
         realized_deposits=realized_deposits,
-        realized_withdrawals=realized_withdrawals,
+        realized_withdrawals_bruto=realized_withdrawals_bruto,
+        realized_withdrawals_netto=realized_withdrawals_netto,
         total_costs_paid=_safe_float(total_costs_paid),
         total_management_costs_paid=_safe_float(total_management_costs_paid),
         total_fund_costs_paid=_safe_float(total_fund_costs_paid),
@@ -390,8 +396,8 @@ def bereken_kosten(inp: RekenInput) -> RekenOutput:
     end_values_bruto_arr = np.array([r.end_value_bruto for r in scenario_results], dtype=float)
     end_values_netto_arr = np.array([r.end_value_netto for r in scenario_results], dtype=float)
     
-    profits_bruto_arr = np.array([r.end_value_bruto - r.realized_deposits + r.realized_withdrawals for r in scenario_results], dtype=float)
-    profits_netto_arr = np.array([r.end_value_netto - r.realized_deposits + r.realized_withdrawals for r in scenario_results], dtype=float)
+    profits_bruto_arr = np.array([r.end_value_bruto - r.realized_deposits + r.realized_withdrawals_bruto for r in scenario_results], dtype=float)
+    profits_netto_arr = np.array([r.end_value_netto - r.realized_deposits + r.realized_withdrawals_netto for r in scenario_results], dtype=float)
     
     monthly_paths_bruto_arr = np.array([r.monthly_values_bruto for r in scenario_results], dtype=float)
     monthly_paths_netto_arr = np.array([r.monthly_values_netto for r in scenario_results], dtype=float)

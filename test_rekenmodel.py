@@ -35,7 +35,7 @@ class RekenmodelTests(unittest.TestCase):
 
         out_day_1 = bereken_kosten(inp_day_1)
         out_day_30 = bereken_kosten(inp_day_30)
-        self.assertEqual(out_day_1.verwacht_eindvermogen, out_day_30.verwacht_eindvermogen)
+        self.assertEqual(out_day_1.verwacht_eindvermogen_netto, out_day_30.verwacht_eindvermogen_netto)
         self.assertEqual(out_day_1.tijdlijn_cashflow_netto, out_day_30.tijdlijn_cashflow_netto)
 
     def test_reproducible_with_fixed_seed(self) -> None:
@@ -49,8 +49,8 @@ class RekenmodelTests(unittest.TestCase):
         )
         out_1 = bereken_kosten(inp)
         out_2 = bereken_kosten(inp)
-        self.assertEqual(out_1.verwacht_eindvermogen, out_2.verwacht_eindvermogen)
-        self.assertEqual(out_1.tijdlijn_vermogen, out_2.tijdlijn_vermogen)
+        self.assertEqual(out_1.verwacht_eindvermogen_netto, out_2.verwacht_eindvermogen_netto)
+        self.assertEqual(out_1.tijdlijn_vermogen_netto, out_2.tijdlijn_vermogen_netto)
 
     def test_horizon_zero_returns_single_timeline_point(self) -> None:
         inp = RekenInput(
@@ -62,10 +62,10 @@ class RekenmodelTests(unittest.TestCase):
         )
         out = bereken_kosten(inp)
         self.assertEqual(len(out.tijdlijn_datums), 1)
-        self.assertEqual(len(out.tijdlijn_vermogen), 1)
-        self.assertEqual(out.tijdlijn_vermogen[0], 12345.0)
-        self.assertEqual(out.verwacht_eindvermogen, 12345.0)
-        self.assertTrue(out.verwachte_winst == 0.0)
+        self.assertEqual(len(out.tijdlijn_vermogen_netto), 1)
+        self.assertEqual(out.tijdlijn_vermogen_netto[0], 12345.0)
+        self.assertEqual(out.verwacht_eindvermogen_netto, 12345.0)
+        self.assertTrue(out.verwachte_winst_netto == 0.0)
 
     def test_withdrawal_clamping_prevents_overstated_profit(self) -> None:
         inp = RekenInput(
@@ -77,12 +77,12 @@ class RekenmodelTests(unittest.TestCase):
             periodieke_onttrekking_maandelijks=1000.0,
         )
         out = bereken_kosten(inp)
-        self.assertEqual(out.verwacht_eindvermogen, 0.0)
-        self.assertEqual(out.verwachte_winst, 0.0)
-        self.assertEqual(out.tijdlijn_cashflow_netto[1], -100.0)
+        self.assertEqual(out.verwacht_eindvermogen_netto, 0.0)
+        self.assertEqual(out.verwachte_winst_bruto, 0.0)
+        self.assertEqual(out.tijdlijn_cashflow_netto[1], -99.935)
         self.assertTrue(all(v >= -100.0 for v in out.tijdlijn_cashflow_netto))
         total_realized_withdrawals = sum(-v for v in out.tijdlijn_cashflow_netto if v < 0)
-        self.assertEqual(total_realized_withdrawals, 100.0)
+        self.assertEqual(total_realized_withdrawals, 99.935)
 
 
 if __name__ == "__main__":
