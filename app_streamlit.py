@@ -206,7 +206,7 @@ with st.sidebar:
     
     profiel_opties = allowed_profielen_for_horizon(int(horizon_jaren))
     
-    with st.expander("Profiel & Simulatie"):
+    with st.expander("Profiel & simulatie"):
         afbouw_profiel = st.checkbox("Afbouw profiel o.b.v. horizon", value=False)
         
         if not afbouw_profiel:
@@ -228,7 +228,7 @@ with st.sidebar:
             
         n_scenarios = st.number_input("Aantal marktsimulaties", min_value=100, value=5000, step=100)
 
-    with st.expander("Periodieke Cashflows"):
+    with st.expander("Periodieke cashflows"):
         periodieke_storting = currency_text_input("Maandelijkse Storting (€)", key="periodieke_storting", default=0.0)
         storting_beperken = st.checkbox("Beperk storting tot periode")
         if storting_beperken and periodieke_storting > 0:
@@ -249,7 +249,7 @@ with st.sidebar:
             periodieke_onttrekking_startdatum = None
             periodieke_onttrekking_einddatum = None
 
-    with st.expander("Eenmalige Cashflows"):
+    with st.expander("Eenmalige cashflows"):
         if st.session_state.eenmalige_cashflows:
             for idx, cf in enumerate(st.session_state.eenmalige_cashflows):
                 cf_col1, cf_col2 = st.columns([3, 1])
@@ -278,12 +278,12 @@ with st.sidebar:
     eenmalige_cashflows_list = st.session_state.eenmalige_cashflows.copy()
 
     st.divider()
-    calculate_clicked = st.button("Bereken Prognose", type="primary", use_container_width=True)
+    calculate_clicked = st.button("Bereken", type="primary", use_container_width=True)
 
 # ==========================================
 # MAIN CONTENT: Calculations & Results
 # ==========================================
-st.title("Bloei Vermogensprognose")
+st.title("Bloei rekentool")
 
 inp = RekenInput(
     startvermogen=startvermogen,
@@ -323,20 +323,20 @@ def signed_class(amount: float) -> str:
     return "bloei-positive" if amount >= 0 else "bloei-negative"
 
 # Top Metrics
-st.subheader("Verwacht Resultaat")
+st.subheader("Verwacht resultaat")
 return_col1, return_col2, return_col3 = st.columns(3)
 
 with return_col1:
-    st.metric("Eindvermogen Netto", fmt_eur(result.verwacht_eindvermogen_netto, 0))
+    st.metric("Eindvermogen netto", fmt_eur(result.verwacht_eindvermogen_netto, 0))
     st.markdown(f"<p class='bloei-note'>Na aftrek van alle kosten</p>", unsafe_allow_html=True)
 
 with return_col2:
     winst_netto = result.verwacht_eindvermogen_netto - (active_startvermogen + sum(result.tijdlijn_cashflow_netto))
-    st.metric("Verwachte Winst Netto", fmt_eur(winst_netto, 0))
+    st.metric("Verwachte winst netto", fmt_eur(winst_netto, 0))
     st.markdown(f"<p class='bloei-note'>Puur rendement na kosten</p>", unsafe_allow_html=True)
     
 with return_col3:
-    st.metric("Totale Impact Kosten", fmt_eur(-float(result.totale_kosten_impact), 0))
+    st.metric("Totale impact kosten", fmt_eur(-float(result.totale_kosten_impact), 0))
     st.markdown(f"<p class='bloei-note'>Betaalde kosten + misgelopen rendement</p>", unsafe_allow_html=True)
 
 st.divider()
@@ -362,7 +362,7 @@ df["tooltip_p90"] = df["vermogen_p90_netto"].map(lambda x: fmt_eur(x, 0))
 
 
 tab_vermogensopbouw, tab_waterfall, tab_cashflow, tab_kosten = st.tabs([
-    "Vermogensopbouw", "Reis van uw geld", "Cashflow Tabel", "Kosten Breakdown"
+    "Vermogensopbouw", "Componenten", "Cashflow overzicht", "Kosten overzicht"
 ])
 
 with tab_vermogensopbouw:
@@ -442,7 +442,7 @@ with tab_vermogensopbouw:
         st.altair_chart(vermogen_chart, use_container_width=True)
 
 with tab_waterfall:
-    st.subheader("Van Start tot Eindvermogen")
+    st.subheader("Van start tot eindvermogen")
     st.write("Hoe uw vermogen is opgebouwd over de gehele periode.")
     
     totale_stortingen = sum(cf for cf in result.tijdlijn_cashflow_netto if cf > 0)
@@ -575,22 +575,23 @@ with tab_cashflow:
         })
 
         df_year = pd.concat([jaar_nul_row, df_year], ignore_index=True)
-        df_year["Cumulatieve Kosten Impact"] = df_year["vermogen_bruto"] - df_year["vermogen_netto"]
+        df_year["Cumulatieve kosten impact"] = df_year["vermogen_bruto"] - df_year["vermogen_netto"]
 
-        for col in ["vermogen_bruto", "vermogen_netto", "cashflow_netto", "kosten_cumulatief_betaald", "kosten_misgelopen_rendement_cumulatief", "Cumulatieve Kosten Impact"]:
+        for col in ["vermogen_bruto", "vermogen_netto", "cashflow_netto", "kosten_cumulatief_betaald", "kosten_misgelopen_rendement_cumulatief", "Cumulatieve kosten impact"]:
             df_year[col] = df_year[col].map(lambda x: fmt_eur(x, 0))
 
         st.dataframe(
             df_year[[
                 "Jaar", "vermogen_bruto", "vermogen_netto", "cashflow_netto", 
                 "kosten_cumulatief_betaald", "kosten_misgelopen_rendement_cumulatief", 
-                "Cumulatieve Kosten Impact", "profiel"
+                "Cumulatieve kosten impact", "profiel"
             ]].rename(columns={
-                "vermogen_bruto": "Vermogen Bruto",
-                "vermogen_netto": "Vermogen Netto",
-                "cashflow_netto": "Netto Cashflow",
-                "kosten_cumulatief_betaald": "Cumul. Kosten Betaald",
-                "kosten_misgelopen_rendement_cumulatief": "Cumul. Misgelopen Rendement",
+                "vermogen_bruto": "Vermogen bruto",
+                "vermogen_netto": "Vermogen netto",
+                "cashflow_netto": "Netto cashflow",
+                "kosten_cumulatief_betaald": "Cumul. kosten betaald",
+                "kosten_misgelopen_rendement_cumulatief": "Cumul. misgelopen rendement",
+                "Cumulatieve kosten impact": "Cumulatieve kosten impact",
                 "profiel": "Profiel (eind jaar)"
             }),
             hide_index=True,
@@ -604,7 +605,7 @@ with tab_kosten:
     with kosten_center:
         st.markdown(
             f"""
-<h3 style="color:{BLOEI_PETROL}; margin:0 0 0.5rem; font-weight: 600;">Kosten Breakdown</h3>
+<h3 style="color:{BLOEI_PETROL}; margin:0 0 0.5rem; font-weight: 600;">Kosten overzicht</h3>
 <table class="kosten-open-table">
   <thead>
     <tr>
