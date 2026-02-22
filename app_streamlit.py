@@ -1,5 +1,9 @@
 """Streamlit UI for the Bloei Rekenmodule."""
 
+import os
+# Forceer de Streamlit theme instellingen (belangrijk voor Azure Web App deployment)
+os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#0f494f"
+
 import streamlit as st
 from datetime import date, datetime
 from bloei_rekenmodel import RekenInput, bereken_kosten, EenmaligeCashflow
@@ -181,6 +185,54 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
 .kosten-open-table th:last-child,
 .kosten-open-table td:last-child {{
     text-align: right;
+}}
+
+/* Optimalisaties voor Dark Mode: Lichte achtergronden voor leesbaarheid van Petrol */
+@media (prefers-color-scheme: dark) {{
+    [data-testid="stVegaLiteChart"] {{
+        background-color: var(--bloei-warmgrey);
+        padding: 1rem;
+        border-radius: 8px;
+    }}
+    [data-testid="stDataFrame"] > div {{
+        background-color: var(--bloei-warmgrey);
+        border-radius: 8px;
+        padding: 0.5rem;
+    }}
+    .kosten-open-table {{
+        background-color: var(--bloei-warmgrey);
+        padding: 1rem;
+        border-radius: 8px;
+        color: #31333F !important;
+    }}
+    .kosten-open-table th, .kosten-open-table td {{
+        border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    }}
+    div[data-testid="metric-container"] {{
+        background-color: var(--bloei-warmgrey) !important;
+        border-color: rgba(0, 0, 0, 0.1) !important;
+    }}
+    div[data-testid="metric-container"] label,
+    .bloei-note {{
+        color: #555555 !important;
+    }}
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {{
+        color: var(--bloei-petrol) !important;
+    }}
+    .bloei-title-petrol {{
+        color: var(--bloei-petrol) !important;
+    }}
+    .highlight-row {{
+        background-color: rgba(15, 73, 79, 0.1) !important;
+    }}
+}}
+.bloei-title-petrol {{
+    color: var(--bloei-petrol);
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+}}
+.highlight-row {{
+    background-color: rgba(15, 73, 79, 0.05);
 }}
 </style>
 """,
@@ -606,7 +658,7 @@ with tab_kosten:
     with kosten_center:
         st.markdown(
             f"""
-<h3 style="color:{BLOEI_PETROL}; margin:0 0 0.5rem; font-weight: 600;">Kosten overzicht</h3>
+<h3 class="bloei-title-petrol">Kosten overzicht</h3>
 <table class="kosten-open-table">
   <thead>
     <tr>
@@ -631,7 +683,7 @@ with tab_kosten:
       <td>{fmt_pct_nl(result.gemiddelde_spreadkosten_pct)}</td>
       <td>{fmt_eur(-float(result.totale_spreadkosten_betaald), 0)}</td>
     </tr>
-    <tr style="background-color: rgba(15, 73, 79, 0.05);">
+    <tr class="highlight-row">
       <td><strong>Totaal betaald</strong></td>
       <td><strong>{fmt_pct_nl(result.gemiddelde_totale_kosten_pct)}</strong></td>
       <td><strong>{fmt_eur(-float(result.totale_kosten_betaald), 0)}</strong></td>
