@@ -107,7 +107,8 @@ if 'eenmalige_cashflows' not in st.session_state:
     st.session_state.eenmalige_cashflows = []
 
 st.set_page_config(
-    page_title="Bloei Rekenmodule",
+    page_title="Bloei rekenmodule",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -283,7 +284,7 @@ with st.sidebar:
 # ==========================================
 # MAIN CONTENT: Calculations & Results
 # ==========================================
-st.title("Bloei rekentool")
+st.title("Bloei rekenmodule")
 
 inp = RekenInput(
     startvermogen=startvermogen,
