@@ -149,14 +149,18 @@ div.stButton > button:first-child:active {
 }
 
 /* Reset slider color to petrol */
-div.stSlider > div[data-baseweb="slider"] > div > div > div:first-child {
-    background-color: var(--bloei-petrol) !important;
-}
-div.stSlider > div[data-baseweb="slider"] > div > div > div[role="slider"] {
+div.stSlider div[data-baseweb="slider"] div[role="slider"] {
     background-color: var(--bloei-petrol) !important;
     border-color: var(--bloei-petrol) !important;
     border-width: 2px !important;
     box-shadow: none !important;
+}
+div.stSlider div[data-baseweb="slider"] div[role="slider"]:hover,
+div.stSlider div[data-baseweb="slider"] div[role="slider"]:focus {
+    box-shadow: 0 0 0 0.2rem rgba(15, 73, 79, 0.2) !important;
+}
+div.stSlider div[data-baseweb="slider"] > div:last-child > div > div:first-child {
+    background-color: var(--bloei-petrol) !important;
 }
 
 /* Modern Metric Containers - fully transparent without beige background */
