@@ -159,9 +159,7 @@ div.stSlider div[data-baseweb="slider"] div[role="slider"]:hover,
 div.stSlider div[data-baseweb="slider"] div[role="slider"]:focus {
     box-shadow: 0 0 0 0.2rem rgba(15, 73, 79, 0.2) !important;
 }
-div.stSlider div[data-baseweb="slider"] > div:last-child > div > div:first-child {
-    background-color: var(--bloei-petrol) !important;
-}
+
 
 /* Modern Metric Containers - fully transparent without beige background */
 div[data-testid="metric-container"] {
@@ -222,6 +220,34 @@ div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
 }
 .highlight-row {
     background-color: rgba(15, 73, 79, 0.05);
+}
+
+/* BaseWeb Slider Global Override */
+div[data-baseweb="slider"] {
+    --primary-color: var(--bloei-petrol) !important;
+}
+
+/* 1. The label/value above the thumb */
+div[data-testid="stThumbValue"],
+div[data-baseweb="slider"] [data-testid="stThumbValue"] {
+    color: var(--bloei-petrol) !important;
+}
+
+/* 2. The thumb itself (the draggable circle) */
+div[data-baseweb="slider"] div[role="slider"] {
+    background-color: var(--bloei-petrol) !important;
+    border-color: var(--bloei-petrol) !important;
+}
+
+/* 3. The thumb's glow when hovered/focused */
+div[data-baseweb="slider"] div[role="slider"]:focus,
+div[data-baseweb="slider"] div[role="slider"]:hover {
+    box-shadow: 0 0 0 0.2rem rgba(15, 73, 79, 0.2) !important;
+}
+
+/* 4. Active track segment */
+div[data-baseweb="slider"] div[data-testid="stTickBar"] > div {
+    background-color: var(--bloei-petrol) !important;
 }
 
 /* Optimalisaties voor Dark Mode */
